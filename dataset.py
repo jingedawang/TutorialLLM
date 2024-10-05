@@ -44,24 +44,24 @@ class Dataset():
         # Create a vocabulary from all the characters appeared in the dataset
         all_text = f'{pretrain_text}{"".join(finetune_texts)}\0'
         characters = sorted(list(set(all_text)))
-        vocabulary_size = len(characters)
-        print(f'Dataset length: {len(all_text)}, vocabulary size: {vocabulary_size}')
+        self.vocabulary_size = len(characters)
+        print(f'Dataset length: {len(all_text)}, vocabulary size: {self.vocabulary_size}')
         # Create a mapping from characters to indices and vice versa
         character_to_index = { character: index for index, character in enumerate(characters) }
         index_to_character = { index: character for index, character in enumerate(characters) }
         # Encode method to convert a text to a list of indices
-        encode = lambda text: [character_to_index[character] for character in text]
+        self.encode = lambda text: [character_to_index[character] for character in text]
         # Decode method to convert a list of indices back to a text
-        decode = lambda index_list: ''.join([index_to_character[index] for index in index_list])
+        self.decode = lambda index_list: ''.join([index_to_character[index] for index in index_list])
 
         # Train and test splits for pretrain data
-        pretrain_data = torch.tensor(encode(pretrain_text), dtype=torch.long)
+        pretrain_data = torch.tensor(self.encode(pretrain_text), dtype=torch.long)
         # Split the data into 90% train and 10% validation
         self.pretrain_train_data = pretrain_data[:int(0.9 * len(pretrain_data))]
         self.pretrain_validation_data = pretrain_data[int(0.9 * len(pretrain_data)):]
 
         # Train and test splits for instruction finetune data
-        finetune_data = [torch.tensor(encode(finetune_text), dtype=torch.long) for finetune_text in finetune_texts]
+        finetune_data = [torch.tensor(self.encode(finetune_text), dtype=torch.long) for finetune_text in finetune_texts]
         # Split the data into 90% train and 10% validation
         print(len(finetune_data))
         self.finetune_train_data = finetune_data[:int(0.9 * len(finetune_data))]

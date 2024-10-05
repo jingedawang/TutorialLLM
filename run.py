@@ -15,15 +15,15 @@ batch_size = 16
 # The maximum length of a text to be processed
 block_size = 256
 # The number of iterations to train (each iteration processes a batch)
-train_iterations = 50000
+train_iterations = 500
 # The interval of iterations to evaluate the model
-evaluation_interval = 500
+evaluation_interval = 50
 # The learning rate of the optimizer
 learning_rate = 1e-3
 # Run the model on GPU(cuda) if available
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 # The number of iterations to evaluate the model
-eval_iters = 200
+eval_iters = 100
 # The dimension of the embedding vector in the transformer
 dim_embedding = 64
 # The number of heads in the multi-head attention
@@ -52,13 +52,13 @@ def estimate_loss_eval(stage='pretrain'):
     if stage == 'pretrain':
       losses = torch.zeros(eval_iters)
       for k in range(eval_iters):
-          X, Y = get_batch_pretrain('val')
+          X, Y = dataset.get_batch_pretrain('val')
           logits, loss = model(X, Y)
           losses[k] = loss.item()
       loss = losses.mean()
     else:
       loss_sum = 0
-      batch_generator = generate_batch_finetune('val')
+      batch_generator = dataset.generate_batch_finetune('val')
       for k, batch in enumerate(batch_generator):
         X, Y = batch
         logits, loss = model(X, Y)
@@ -145,11 +145,11 @@ class BigramLanguageModel(nn.Module):
     def __init__(self):
         super().__init__()
         # each token directly reads off the logits for the next token from a lookup table
-        self.token_embedding_table = nn.Embedding(vocabulary_size, dim_embedding)
+        self.token_embedding_table = nn.Embedding(dataset.vocabulary_size, dim_embedding)
         self.position_embedding_table = nn.Embedding(block_size, dim_embedding)
         self.blocks = nn.Sequential(*[Block(dim_embedding, n_head=num_head) for _ in range(num_layer)])
         self.ln_f = nn.LayerNorm(dim_embedding) # final layer norm
-        self.lm_head = nn.Linear(dim_embedding, vocabulary_size)
+        self.lm_head = nn.Linear(dim_embedding, dataset.vocabulary_size)
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
@@ -212,13 +212,13 @@ for iter in range(train_iterations):
     if iter % evaluation_interval == 0 or iter == train_iterations - 1:
         mean_loss_train = loss_sum / evaluation_interval
         loss_sum = 0
-        loss = estimate_loss_eval()
+        loss = estimate_loss_eval(stage='pretrain')
         print(f"step {iter}: train loss {mean_loss_train:.4f}, val loss {loss:.4f}")
-        context = torch.tensor(encode('月'), dtype=torch.long, device=device).unsqueeze(0)
-        print(decode(m.generate(context, max_new_tokens=100)[0].tolist()))
+        context = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
+        print(dataset.decode(m.generate(context, max_new_tokens=100)[0].tolist()))
 
     # sample a batch of data
-    xb, yb = get_batch_pretrain('train')
+    xb, yb = dataset.get_batch_pretrain('train')
 
     # evaluate the loss
     logits, loss = model(xb, yb)
@@ -241,8 +241,8 @@ model = torch.load('model.pth')
 m = model.to(device)
 
 # generate from the model
-context = torch.tensor(encode('月'), dtype=torch.long, device=device).unsqueeze(0)
-print(decode(m.generate(context, max_new_tokens=200)[0].tolist()))
+context = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
+print(dataset.decode(m.generate(context, max_new_tokens=200)[0].tolist()))
 
 # Set optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
@@ -250,18 +250,18 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 
 loss_sum = 0
-epochs = 20
+epochs = 1
 test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
 for epoch in range(epochs):
-  for iter, (xb, yb) in enumerate(generate_batch_finetune('train')):
+  for iter, (xb, yb) in enumerate(dataset.generate_batch_finetune('train')):
     # every once in a while evaluate the loss on train and val sets
     if iter % evaluation_interval == 0:
         mean_loss_train = loss_sum / evaluation_interval
         loss_sum = 0
         loss = estimate_loss_eval('finetune')
         print(f"epoch {epoch}, step {iter}, train loss {mean_loss_train:.4f}, val loss {loss:.4f}")
-        context = torch.tensor(encode(test_input), dtype=torch.long, device=device).unsqueeze(0)
-        output = decode(m.generate(context, max_new_tokens=100)[0].tolist())
+        context = torch.tensor(dataset.encode(test_input), dtype=torch.long, device=device).unsqueeze(0)
+        output = dataset.decode(m.generate(context, max_new_tokens=100)[0].tolist())
         # Truncate the output to the '\0' character
         output = output[:output.find('\0')]
         print(output[len(test_input):])
