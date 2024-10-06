@@ -1,150 +1,117 @@
-import json
-import random
-from model import BigramLanguageModel
+from model import TutorialLLM
 import torch
-import torch.nn as nn
-from torch.nn import functional as F
 
-print(f'------------------ Prepare Data ------------------')
-
-
-"""
-Configuration
-"""
-# The number of parallel items to process
+print(f'{"-"*50}\nSTAGE 1: CONFIGURATION')
+# The number of parallel items to process, known as the batch size
 batch_size = 16
 # The maximum length of a text to be processed
-block_size = 256
+max_length = 256
 # The number of iterations to train (each iteration processes a batch)
-train_iterations = 500
+iterations_for_training = 500
+# The number of iterations to evaluate the model (each iteration processes a batch)
+iterations_for_evaluation = 100
 # The interval of iterations to evaluate the model
 evaluation_interval = 50
 # The learning rate of the optimizer
 learning_rate = 1e-3
 # Run the model on GPU(cuda) if available
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# The number of iterations to evaluate the model
-eval_iters = 100
-
 
 # Set a seed for reproducibility
-torch.manual_seed(1993)
+torch.manual_seed(2024)
 
-"""
-Prepare Data
-"""
+print(f'{"-"*50}\nSTAGE 2: PREPARE THE DATA')
 from dataset import Dataset
-dataset = Dataset('data.json', batch_size, block_size, device)
+dataset = Dataset('data.json', batch_size, max_length, device)
 print('Check a batch of pretrain data:')
 print(dataset.get_batch_pretrain('train'))
 print('Check a batch of finetune data:')
 print(next(dataset.generate_batch_finetune('train')))
 
-@torch.no_grad()
-def estimate_loss_eval(stage='pretrain'):
-    model.eval()
-    if stage == 'pretrain':
-      losses = torch.zeros(eval_iters)
-      for k in range(eval_iters):
-          X, Y = dataset.get_batch_pretrain('val')
-          logits, loss = model(X, Y)
-          losses[k] = loss.item()
-      loss = losses.mean()
-    else:
-      loss_sum = 0
-      batch_generator = dataset.generate_batch_finetune('val')
-      for k, batch in enumerate(batch_generator):
-        X, Y = batch
-        logits, loss = model(X, Y)
-        loss_sum += loss.item()
-      loss = loss_sum / (k+1)
-    model.train()
-    return loss
 
-print(f'------------------ Pretrain ------------------')
+print(f'{"-"*50}\nSTAGE 3: CREATE THE MODEL')
 # The dimension of the embedding vector in the transformer
 dim_embedding = 64
 # The number of heads in the multi-head attention
 num_head = 4
 # The number of layers in the transformer
 num_layer = 4
-# The dropout rate, 0.0 means no dropout
-dropout = 0.0
-model = BigramLanguageModel(dataset.vocabulary_size, dim_embedding, block_size, num_head, num_layer, device)
-model.train()
-m = model.to(device)
-# print the number of parameters in the model
-print(sum(p.numel() for p in m.parameters())/1e6, 'M parameters')
 
-# create a PyTorch optimizer
+# Create a TutorialLLM instance
+model = TutorialLLM(dataset.vocabulary_size, dim_embedding, max_length, num_head, num_layer, device)
+# Switch the model to training mode
+model.train()
+model.to(device)
+# Show the model size
+print(f'Our model has {sum(parameter.numel() for parameter in model.parameters())/1e6} M parameters')
+# Use AdamW optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
+print(f'{"-"*50}\nSTAGE 4: PRETRAIN')
 loss_sum = 0
-for iter in range(train_iterations):
-
-    # every once in a while evaluate the loss on train and val sets
-    if iter % evaluation_interval == 0 or iter == train_iterations - 1:
+for i in range(iterations_for_training):
+    # Evaluate the model every evaluation_interval iterations
+    if i % evaluation_interval == 0 or i == iterations_for_training - 1:
+        # Calculate the average loss for this interval
         mean_loss_train = loss_sum / evaluation_interval
         loss_sum = 0
-        loss = estimate_loss_eval(stage='pretrain')
-        print(f"step {iter}: train loss {mean_loss_train:.4f}, val loss {loss:.4f}")
-        context = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
-        print(dataset.decode(m.generate(context, max_new_tokens=100)[0].tolist()))
+        loss = model.estimate_loss_eval(iterations_for_evaluation, dataset, 'pretrain')
+        print(f"Step {i}, train loss {mean_loss_train:.4f}, evaluate loss {loss:.4f}")
 
-    # sample a batch of data
+        # Let's generate a poem starting with the word '月' to see how the model is doing
+        test_tokens = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
+        print(dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
+
+    # Get a batch of pretrain data
     xb, yb = dataset.get_batch_pretrain('train')
 
-    # evaluate the loss
+    # Forward pass and calculate the loss
     logits, loss = model(xb, yb)
     loss_sum += loss.item()
 
-    # backprop
+    # Backward pass and update the model
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
 
+print('Save the pretrained model...')
 # Save model to file
-torch.save(model, 'model.pth')
-
-
-
-print(f'------------------ Finetune ------------------')
-
-# Load model from file
-model = torch.load('model.pth')
-m = model.to(device)
-
-# generate from the model
-context = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
-print(dataset.decode(m.generate(context, max_new_tokens=200)[0].tolist()))
-
-# Set optimizer
+torch.save(model, 'model_pretrain.pth')
+# Reload the model from file
+model.load_state_dict(torch.load('model_pretrain.pth').state_dict())
+# Reset the optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-
-
+print(f'{"-"*50}\nSTAGE 5: FINETUNE')
 loss_sum = 0
 epochs = 1
 test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
 for epoch in range(epochs):
-  for iter, (xb, yb) in enumerate(dataset.generate_batch_finetune('train')):
-    # every once in a while evaluate the loss on train and val sets
-    if iter % evaluation_interval == 0:
+  for i, (xb, yb) in enumerate(dataset.generate_batch_finetune('train')):
+    # Evaluate the model every evaluation_interval iterations
+    if i % evaluation_interval == 0:
+        # Calculate the average loss for this interval
         mean_loss_train = loss_sum / evaluation_interval
         loss_sum = 0
-        loss = estimate_loss_eval('finetune')
-        print(f"epoch {epoch}, step {iter}, train loss {mean_loss_train:.4f}, val loss {loss:.4f}")
-        context = torch.tensor(dataset.encode(test_input), dtype=torch.long, device=device).unsqueeze(0)
-        output = dataset.decode(m.generate(context, max_new_tokens=100)[0].tolist())
+        loss = model.estimate_loss_eval(iterations_for_evaluation, dataset, 'finetune')
+        print(f"Epoch {epoch}, step {i}, train loss {mean_loss_train:.4f}, evaluate loss {loss:.4f}")
+
+        # Let's generate a poem with a given title to see how the model is doing
+        test_tokens = torch.tensor(dataset.encode(test_input), dtype=torch.long, device=device).unsqueeze(0)
+        output = dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist())
         # Truncate the output to the '\0' character
         output = output[:output.find('\0')]
         print(output[len(test_input):])
 
-    # evaluate the loss
+    # Forward pass and calculate the loss
     logits, loss = model(xb, yb)
     loss_sum += loss.item()
 
-    # backprop
+    # Backward pass and update the model
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
+
+print('Save the finetuned model...')
+# Save model to file
+torch.save(model, 'model_finetune.pth')

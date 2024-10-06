@@ -3,8 +3,14 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-class Head(nn.Module):
-    """ one head of self-attention """
+class AttentionHead(nn.Module):
+    """
+    Single head of self-attention.
+
+    This module computes the self-attention for a sequence of vectors of shape (B, T, C),
+    where B(batch) is the batch size, T(token) is the sequence length, and C(channel) is the dimension of each vector.
+    The attention mechanism refers to the famous transformer paper "Attention is All You Need".
+    """
 
     def __init__(self, dim_embedding, head_size, block_size):
         super().__init__()
@@ -31,7 +37,7 @@ class MultiHeadAttention(nn.Module):
 
     def __init__(self, dim_embedding, num_heads, head_size, block_size):
         super().__init__()
-        self.heads = nn.ModuleList([Head(dim_embedding, head_size, block_size) for _ in range(num_heads)])
+        self.heads = nn.ModuleList([AttentionHead(dim_embedding, head_size, block_size) for _ in range(num_heads)])
         self.proj = nn.Linear(dim_embedding, dim_embedding)
 
     def forward(self, x):
@@ -71,7 +77,7 @@ class Block(nn.Module):
         return x
 
 # super simple bigram model
-class BigramLanguageModel(nn.Module):
+class TutorialLLM(nn.Module):
 
     def __init__(self, vocabulary_size, dim_embedding, block_size, num_head, num_layer, device):
         super().__init__()
@@ -127,3 +133,24 @@ class BigramLanguageModel(nn.Module):
             if idx_next.item() == 0:
                 break
         return idx
+
+    @torch.no_grad()
+    def estimate_loss_eval(self, iterations, dataset, stage='pretrain'):
+        self.eval()
+        if stage == 'pretrain':
+            losses = torch.zeros(iterations)
+            for k in range(iterations):
+                X, Y = dataset.get_batch_pretrain('evaluate')
+                logits, loss = self(X, Y)
+                losses[k] = loss.item()
+            loss = losses.mean()
+        else:
+            loss_sum = 0
+            batch_generator = dataset.generate_batch_finetune('evaluate')
+            for k, batch in enumerate(batch_generator):
+                X, Y = batch
+                logits, loss = self(X, Y)
+                loss_sum += loss.item()
+            loss = loss_sum / (k+1)
+        self.train()
+        return loss

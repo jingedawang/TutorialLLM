@@ -38,7 +38,7 @@ class Dataset():
             paragraphs = '\n'.join(poetry['paragraphs'])
             content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{paragraphs}'
             finetune_texts.append(content)
-        print('The instruction finetune data is a list of formatted texts. Here are the first item:')
+        print('The instruction finetune data is a list of formatted texts. Here is the first item:')
         print(finetune_texts[0])
 
         # Create a vocabulary from all the characters appeared in the dataset
@@ -56,26 +56,26 @@ class Dataset():
 
         # Train and test splits for pretrain data
         pretrain_data = torch.tensor(self.encode(pretrain_text), dtype=torch.long)
-        # Split the data into 90% train and 10% validation
+        # Split the data into 90% train and 10% evaluate
         self.pretrain_train_data = pretrain_data[:int(0.9 * len(pretrain_data))]
-        self.pretrain_validation_data = pretrain_data[int(0.9 * len(pretrain_data)):]
+        self.pretrain_evaluate_data = pretrain_data[int(0.9 * len(pretrain_data)):]
 
         # Train and test splits for instruction finetune data
         finetune_data = [torch.tensor(self.encode(finetune_text), dtype=torch.long) for finetune_text in finetune_texts]
-        # Split the data into 90% train and 10% validation
+        # Split the data into 90% train and 10% evaluate
         print(len(finetune_data))
         self.finetune_train_data = finetune_data[:int(0.9 * len(finetune_data))]
-        self.finetune_validation_data = finetune_data[int(0.9 * len(finetune_data)):]
+        self.finetune_evaluate_data = finetune_data[int(0.9 * len(finetune_data)):]
 
     def get_batch_pretrain(self, split: str):
         """
         Generate a batch of pretrain data
 
         Args:
-        - split: 'train' or 'validation'
+        - split: 'train' or 'evaluate'
         """
-        # Choose train or validation split
-        data = self.pretrain_train_data if split == 'train' else self.pretrain_validation_data
+        # Choose train or evaluate split
+        data = self.pretrain_train_data if split == 'train' else self.pretrain_evaluate_data
         # Randomly choose the starting index of each item in the batch
         start_indices = torch.randint(len(data) - self.block_size, (self.batch_size,))
         # The input texts are all the characters in interval [start_index, start_index + block_size) for each item in the batch
@@ -91,10 +91,10 @@ class Dataset():
         Generate a batch of instruction finetune data
 
         Args:
-        - split: 'train' or 'validation'
+        - split: 'train' or 'evaluate'
         """
-        # Choose train or validation split
-        data = self.finetune_train_data if split == 'train' else self.finetune_validation_data
+        # Choose train or evaluate split
+        data = self.finetune_train_data if split == 'train' else self.finetune_evaluate_data
 
         def process_batch(batch: list):
             # All the inputs and labels are initialized to zeros of largest length
