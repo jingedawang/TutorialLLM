@@ -279,7 +279,7 @@ class TutorialLLM(nn.Module):
         """
         for _ in range(max_new_tokens):
             # Crop the input sequence to if it exceeds the maximum length
-            token_ids_available = token_ids[:, -self.max_length:]   # (B, T) -> (B, T')
+            token_ids_available = token_ids[:, -self.max_length:]   # (B, T) -> (B, T'), where T' = min(T, max_length)
             # Run the model to get the logits
             logits, loss = self(token_ids_available)                # (B, T') -> (B, T', vocabulary_size)
             # Pick the logits of the last token where the next token should be predicted
