@@ -12,6 +12,17 @@ Note that a free GPU like T4 in Google Colab is enough for the default setting. 
 run it with only CPU, you may need to reduce training iterations to avoid long waiting time.
 But meanwhile, you cannot observe the expected effect of the training process.
 
+## Run locally
+
+Please install Python 3.12+ and then run the following commands:
+
+```bash
+pip install -r requirements.txt
+python run.py
+```
+
+You will see the training process in the console. By examining the output poems, you can get a sense of how the model learns to generate text.
+
 ## About
 
 I'm a researcher in the field of LLM. I like to share my knowledge with people. You can find me on [Zhihu](https://www.zhihu.com/people/wang-jin-ge-67), [LinkedIn](https://www.linkedin.com/in/wangjinge/), and [GitHub](https://github.com/jingedawang). Feel free to leave an issue or contact me if you have any questions.

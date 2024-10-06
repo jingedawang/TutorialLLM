@@ -1,5 +1,8 @@
-from model import TutorialLLM
+import math
 import torch
+
+from model import TutorialLLM
+
 
 print(f'{"-"*50}\nSTAGE 1: CONFIGURATION')
 # The number of parallel items to process, known as the batch size
@@ -48,7 +51,7 @@ print(f'Our model has {sum(parameter.numel() for parameter in model.parameters()
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 print(f'{"-"*50}\nSTAGE 4: PRETRAIN')
-loss_sum = 0
+loss_sum = math.nan
 for i in range(iterations_for_training):
     # Evaluate the model every evaluation_interval iterations
     if i % evaluation_interval == 0 or i == iterations_for_training - 1:
@@ -60,6 +63,7 @@ for i in range(iterations_for_training):
 
         # Let's generate a poem starting with the word '月' to see how the model is doing
         test_tokens = torch.tensor(dataset.encode('月'), dtype=torch.long, device=device).unsqueeze(0)
+        print('Generate first 100 characters of poems starting with 月:')
         print(dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
 
     # Get a batch of pretrain data
@@ -83,7 +87,7 @@ model.load_state_dict(torch.load('model_pretrain.pth').state_dict())
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 print(f'{"-"*50}\nSTAGE 5: FINETUNE')
-loss_sum = 0
+loss_sum = math.nan
 epochs = 1
 test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
 for epoch in range(epochs):
@@ -101,6 +105,7 @@ for epoch in range(epochs):
         output = dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist())
         # Truncate the output to the '\0' character
         output = output[:output.find('\0')]
+        print('Generate a complete poem for title 月色:')
         print(output[len(test_input):])
 
     # Forward pass and calculate the loss
