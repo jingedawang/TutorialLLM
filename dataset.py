@@ -107,7 +107,8 @@ class Dataset():
             split: Indicate whether to generate a batch for training or evaluation ('train' or 'evaluate').
 
         Returns:
-            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence.
+            Two tensors of shape (`batch_size`, `max_length`), where the first tensor is the input tokens and the second tensor is the label tokens.
+            The second dimension is the length of the text. We formed each label by shifting the input by one character to the right.
         """
         # Choose train or evaluate split
         data = self.pretrain_train_data if split == 'train' else self.pretrain_evaluate_data
@@ -134,7 +135,8 @@ class Dataset():
             split: Indicate whether to generate a batch for training or evaluation ('train' or 'evaluate').
 
         Yields:
-            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence.
+            Two tensors of shape (batch_size, T), where the first tensor is the input tokens and the second tensor is the label tokens, T <= `max_length`.
+            The second dimension is the length of the text. We formed each label by shifting the input by one character to the right.
         """
         # Choose train or evaluate split
         data = self.finetune_train_data if split == 'train' else self.finetune_evaluate_data
