@@ -1,6 +1,7 @@
 import math
 import torch
 
+from dataset import Dataset
 from model import TutorialLLM
 
 
@@ -24,12 +25,11 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 torch.manual_seed(2024)
 
 print(f'{"-"*50}\nSTAGE 2: PREPARE THE DATA')
-from dataset import Dataset
 dataset = Dataset('data.json', batch_size, max_length, device)
 print('Check a batch of pretrain data:')
 print(dataset.get_batch_pretrain('train'))
 print('Check a batch of finetune data:')
-print(next(dataset.generate_batch_finetune('train')))
+print(next(dataset.get_batch_generator_finetune('train')))
 
 
 print(f'{"-"*50}\nSTAGE 3: CREATE THE MODEL')
@@ -91,7 +91,7 @@ loss_sum = math.nan
 epochs = 1
 test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
 for epoch in range(epochs):
-  for i, (xb, yb) in enumerate(dataset.generate_batch_finetune('train')):
+  for i, (xb, yb) in enumerate(dataset.get_batch_generator_finetune('train')):
     # Evaluate the model every evaluation_interval iterations
     if i % evaluation_interval == 0:
         # Calculate the average loss for this interval
