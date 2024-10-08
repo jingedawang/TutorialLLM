@@ -234,7 +234,7 @@ class TutorialLLM(nn.Module):
         # Create a linear layer to project the output from embedding space to vocabulary space
         self.project = nn.Linear(dim_embed, vocabulary_size)
 
-    def forward(self, token_ids: Tensor, labels: Tensor = None):
+    def forward(self, token_ids: Tensor, labels: Tensor = None, reduce_loss: bool = True):
         """
         Compute the forward pass of the model.
 
@@ -267,7 +267,7 @@ class TutorialLLM(nn.Module):
             # Flatten the labels to a list of token ids
             labels = labels.view(B * T)
             # Compute the cross-entropy loss between the logits and the labels
-            loss = F.cross_entropy(logits, labels)
+            loss = F.cross_entropy(logits, labels, reduce=reduce_loss)
 
         return logits, loss
 
@@ -299,16 +299,16 @@ class TutorialLLM(nn.Module):
         return token_ids
 
     @torch.no_grad()
-    def estimate_loss_eval(self, iterations: int, dataset: Dataset, stage='pretrain'):
+    def estimate_loss_eval(self, dataset: Dataset, stage='pretrain', iterations: int = 100):
         """
         Estimate the average loss of the model on the evaluation dataset.
 
         Args:
+            dataset: The dataset where the evaluation data is stored.
+            stage: The training stage of the model, either 'pretrain' or 'finetune'.
             iterations: The number of iterations to evaluate the model (each iteration processes a batch).
                 This argument is only used for the pretrain stage. For the finetune stage, the number of
                 iterations is determined by the evaluation dataset.
-            dataset: The dataset where the evaluation data is stored.
-            stage: The training stage of the model, either 'pretrain' or 'finetune'.
 
         Returns:
             The average loss of the model on the evaluation dataset.

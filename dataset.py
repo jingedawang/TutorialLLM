@@ -20,8 +20,8 @@ class Dataset():
         + For pretrain data, poems are put together to form a long text.
         + For instruction finetune data, each poem is formatted as an instruction-response pair.
             The instruction is a fixed string '請用以下題目寫一首詩' and a title, while the response is the paragraphs of the poem.
-        + For alignment data, each poem will be paired with a negative sample whose title is randomly chosen from other poems.
-            This is used to train the model to learn how to align the title with the content of the poem.
+        + For alignment data, each item contains a positive-negative pair of poems. The positive pair is the original poem,
+            while the negative pair has at least one paragraph replaced by a random paragraph from other poems.
 
         Data in each category will be further split into train and evaluate sets.
         All the data will be tokenized into a token id sequence, where each token is a character in the vocabulary.
@@ -46,32 +46,55 @@ class Dataset():
         finetune_poems = poems[int(len(poems)*0.5):int(len(poems)*0.8)]
         alignment_poems = poems[int(len(poems)*0.8):]
 
-        # Reformat pretrain data
+        # Reformat pretrain data. All poems are concatenated directly to form a long text.
+        # We don't care about the format in pretrain stage. This data is just used to make
+        # the model learn how the poem text looks like.
         pretrain_text = []
         for poetry in pretrain_poems:
-            paragraphs = '\n'.join(poetry['paragraphs'])
-            pretrain_text.append(f'{poetry['title']}\n{paragraphs}')
+            positive_paragraphs = '\n'.join(poetry['paragraphs'])
+            pretrain_text.append(f'{poetry["title"]}\n{positive_paragraphs}')
         pretrain_text = '\n\n'.join(pretrain_text)
         print('The whole pretrain data is a long text with all poems concatenated together. Here are the first 100 characters:')
         print(pretrain_text[:100])
 
-        # Reformat instruction finetune data
+        # Reformat instruction finetune data. Each poem is formatted as an instruction-response pair.
+        # The target of this stage is to fix the format of the poems generate by the model.
         finetune_texts = []
         instruction = '請用以下題目寫一首詩'
         instruction_label = '<INS>'
         input_label = '<INP>'
         response_label = '<RES>'
         for poetry in finetune_poems:
-            paragraphs = '\n'.join(poetry['paragraphs'])
-            content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{paragraphs}'
+            positive_paragraphs = '\n'.join(poetry['paragraphs'])
+            content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{positive_paragraphs}'
             finetune_texts.append(content)
         print('The instruction finetune data is a list of formatted texts. Here is the first item:')
         print(finetune_texts[0])
 
+        # Reformat alignment data. Each poem is paired with a negative sample
+        # whose at least one paragraph is replaced by a random paragraph from other poems.
+        # The target of this stage is to make the model learn how to align the paragraph with the context.
+        alignment_texts = []
+        for poetry in alignment_poems:
+            positive_paragraphs = poetry['paragraphs']
+            # Randomly choose a paragraph to compose the negative sample
+            replace_index = random.randint(0, len(positive_paragraphs)-1)
+            negative_poetry = random.choice(alignment_poems)
+            negative_paragraphs = positive_paragraphs.copy()
+            negative_paragraphs[replace_index] = random.choice(negative_poetry['paragraphs'])
+            # Format the positive and negative texts
+            positive_paragraphs = '\n'.join(positive_paragraphs)
+            negative_paragraphs = '\n'.join(negative_paragraphs)
+            positive_content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{positive_paragraphs}'
+            negative_content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{negative_paragraphs}'
+            alignment_texts.append((positive_content, negative_content))
+        print('The alignment data is a list of positive-negative pairs. Here is the first pair:')
+        print(alignment_texts[0])
+
         # Create a vocabulary from all the characters appeared in the dataset
         # Note that we add a special character '\0' in the end, which is used as an end-of-text token.
         # An end-of-text token is useful to let the model know when to stop generating text.
-        all_text = f'{pretrain_text}{"".join(finetune_texts)}\0'
+        all_text = f'{pretrain_text}{"".join(finetune_texts)}{"".join([pair[0] + pair[1] for pair in alignment_texts])}\0'
         # Get a sorted list of unique characters
         characters = sorted(list(set(all_text)))
         self.vocabulary_size = len(characters)
@@ -95,6 +118,12 @@ class Dataset():
         # Split the data into 90% train and 10% evaluate
         self.finetune_train_data = finetune_data[:int(0.9 * len(finetune_data))]
         self.finetune_evaluate_data = finetune_data[int(0.9 * len(finetune_data)):]
+
+        # Train and evaluate splits for alignment data
+        alignment_data = [(torch.tensor(self.encode(pair[0]), dtype=torch.long), torch.tensor(self.encode(pair[1]), dtype=torch.long)) for pair in alignment_texts]
+        # Split the data into 90% train and 10% evaluate
+        self.alignment_train_data = alignment_data[:int(0.9 * len(alignment_data))]
+        self.alignment_evaluate_data = alignment_data[int(0.9 * len(alignment_data)):]
 
     def get_batch_pretrain(self, split: str):
         """
@@ -185,3 +214,48 @@ class Dataset():
                 # Exclude the first zero because it marks the end of the text
                 labels[i, indices[1:]] = -100
         return inputs, labels
+
+    def get_batch_generator_alignment(self, split: str):
+        """
+        Get a generator to yield batches of alignment data.
+
+        Each item contains a positive-negative pair of poems.
+        The positive pair is the original poem, while the negative pair
+        has at least one paragraph replaced by a random paragraph from other poems.
+        This is used to train the model to learn how to align the paragraph with the context,
+        for example, the phonetic structure of the poem.
+
+        Args:
+            split: Indicate whether to generate a batch for training or evaluation ('train' or 'evaluate').
+
+        Returns:
+            Two group of tensors of shape (batch_size, T) for positive batch and negative batch.
+            Each group contains the input tokens and the label tokens.
+
+        """
+        # All the inputs and labels are initialized to zeros of largest length
+        positive_inputs = torch.zeros(self.batch_size, self.max_length, dtype=torch.long)
+        positive_labels = torch.zeros(self.batch_size, self.max_length, dtype=torch.long)
+        negative_inputs = torch.zeros(self.batch_size, self.max_length, dtype=torch.long)
+        negative_labels = torch.zeros(self.batch_size, self.max_length, dtype=torch.long)
+
+        # Choose train or evaluate split
+        data = self.alignment_train_data if split == 'train' else self.alignment_evaluate_data
+
+        # Initialize an empty list to store the batch
+        batch = []
+        for positive_item, negative_item in data:
+            batch.append((positive_item, negative_item))
+            # If the batch is full, process it and yield
+            if len(batch) >= self.batch_size:
+                positive_inputs, positive_labels = self.process_batch([item[0] for item in batch])
+                negative_inputs, negative_labels = self.process_batch([item[1] for item in batch])
+                # Reset the batch for the next iteration
+                batch = []
+                # Return a batch of inputs and labels to the caller
+                yield positive_inputs.to(self.device), positive_labels.to(self.device), negative_inputs.to(self.device), negative_labels.to(self.device)
+        # If there are still remaining items, process them and yield
+        if len(batch) > 0:
+            positive_inputs, positive_labels = self.process_batch([item[0] for item in batch])
+            negative_inputs, negative_labels = self.process_batch([item[1] for item in batch])
+            yield positive_inputs.to(self.device), positive_labels.to(self.device), negative_inputs.to(self.device), negative_labels.to(self.device)
