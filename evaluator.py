@@ -1,13 +1,13 @@
 import math
 import torch
+from torch.nn import functional as F
 
 from dataset import Dataset
 from model import TutorialLLM
 
 class Evaluator():
 
-    def __init__(self, model: TutorialLLM, dataset: Dataset, device: str, iterations_to_evaluate_pretrain: int, interval_to_evaluate_pretrain: int, interval_to_evaluate_finetune: int, interval_to_evaluate_alignment: int) -> None:
-        self.model = model
+    def __init__(self, dataset: Dataset, device: str, iterations_to_evaluate_pretrain: int, interval_to_evaluate_pretrain: int, interval_to_evaluate_finetune: int, interval_to_evaluate_alignment: int) -> None:
         self.dataset = dataset
         self.device = device
         self.iterations_to_evaluate_pretrain = iterations_to_evaluate_pretrain
@@ -15,70 +15,127 @@ class Evaluator():
         self.interval_to_evaluate_finetune = interval_to_evaluate_finetune
         self.interval_to_evaluate_alignment = interval_to_evaluate_alignment
 
-        self.train_loss_sum = math.nan
         self.test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
+
+        self.reset()
     
     def reset(self):
-        self.train_loss_sum = math.nan
+        self.train_loss_sum = 0
+        self.train_reward_margin_sum = 0
 
     @torch.no_grad()
-    def evaluate_pretrain(self, iteration: int, train_loss: float):
+    def evaluate_pretrain(self, model: TutorialLLM, iteration: int, train_loss: float):
         if iteration % self.interval_to_evaluate_pretrain == 0:
-            # Calculate the average loss for this interval
+            # Get average train loss and evaluate loss
             mean_loss_train = self.train_loss_sum / self.interval_to_evaluate_pretrain
-            self.train_loss_sum = 0
-            evaluate_loss = self.evaluate_pretrain_loss(self.iterations_to_evaluate_pretrain)
+            self.reset()
+            evaluate_loss = self.evaluate_pretrain_loss(model, self.iterations_to_evaluate_pretrain)
             print(f"Step {iteration}, train loss {mean_loss_train:.4f}, evaluate loss {evaluate_loss:.4f}")
 
             # Let's generate a poem starting with the word '月' to see how the model is doing
             test_tokens = torch.tensor(self.dataset.encode('月'), dtype=torch.long, device=self.device).unsqueeze(0)
             print('Generate first 100 characters of poems starting with 月:')
-            print(self.dataset.decode(self.model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
+            print(self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
         
         # Accumulate the training loss
-        self.train_loss_sum += train_loss.item()
+        self.train_loss_sum += train_loss
     
     @torch.no_grad()
-    def evaluate_pretrain_loss(self, iterations: int = 100):
+    def evaluate_pretrain_loss(self, model: TutorialLLM, iterations: int = 100):
         losses = torch.zeros(iterations)
         # Evaluate the model `iterations` times
         for k in range(iterations):
             # Get a batch of pretrain data and compute the loss
-            token_ids, labels = self.dataset.get_batch_pretrain('evaluate')
-            logits, loss = self.model(token_ids, labels)
+            inputs, labels = self.dataset.get_batch_pretrain('evaluate')
+            logits, loss = model(inputs, labels)
             losses[k] = loss.item()
         loss = losses.mean()
         return loss
     
     @torch.no_grad()
-    def evaluate_finetune(self, epoch: int, iteration: int, train_loss: float):
+    def evaluate_finetune(self, model: TutorialLLM, epoch: int, iteration: int, train_loss: float):
         if iteration % self.interval_to_evaluate_finetune == 0:
-            # Calculate the average loss for this interval
+            # Get average train loss and evaluate loss
             mean_loss_train = self.train_loss_sum / self.interval_to_evaluate_finetune
-            self.train_loss_sum = 0
-            evaluate_loss = self.evaluate_finetune_loss()
+            self.reset()
+            evaluate_loss = self.evaluate_finetune_loss(model)
             print(f"Epoch {epoch}, step {iteration}, train loss {mean_loss_train:.4f}, evaluate loss {evaluate_loss:.4f}")
 
             # Let's generate a poem with a given title to see how the model is doing
             test_tokens = torch.tensor(self.dataset.encode(self.test_input), dtype=torch.long, device=self.device).unsqueeze(0)
-            output = self.dataset.decode(self.model.generate(test_tokens, max_new_tokens=100)[0].tolist())
-            # Truncate the output to the '\0' character
+            output = self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist())
+            # Truncate the output to the end-of-text character '\0'
             output = output[:output.find('\0')]
             print('Generate a complete poem for title 月色:')
             print(output[len(self.test_input):])
         
         # Accumulate the training loss
-        self.train_loss_sum += train_loss.item()
+        self.train_loss_sum += train_loss
 
     @torch.no_grad()
-    def evaluate_finetune_loss(self):
+    def evaluate_finetune_loss(self, model: TutorialLLM):
         loss_sum = 0
         # Get a batch generator of finetune data
         batch_generator = self.dataset.get_batch_generator_finetune('evaluate')
         # Evaluate the model by processing all batches generated by the generator
         for k, batch in enumerate(batch_generator):
-            token_ids, labels = batch
-            logits, loss = self.model(token_ids, labels)
+            inputs, labels = batch
+            logits, loss = model(inputs, labels)
             loss_sum += loss.item()
         loss = loss_sum / (k + 1)
         return loss
+
+    @torch.no_grad()
+    def evaluate_alignment(self, model: TutorialLLM, epoch: int, iteration: int, train_loss: float, train_reward_margin: float, reference_model: TutorialLLM):
+        if iteration % self.interval_to_evaluate_alignment == 0:
+            # Calculate the average loss for this interval
+            mean_loss_train = self.train_loss_sum / self.interval_to_evaluate_alignment
+            mean_reward_margin_train = self.train_reward_margin_sum / self.interval_to_evaluate_alignment
+            self.reset()
+            evaluate_loss, evaluate_reward_margin = self.evaluate_alignment_loss(model, reference_model)
+            print(f"Epoch {epoch}, step {iteration}, train loss {mean_loss_train:.4f}, evaluate loss {evaluate_loss:.4f}, train reward margin {mean_reward_margin_train:.4f}, evaluate reward margin {evaluate_reward_margin:.4f}")
+
+            # Let's ask the two models to generate a poem respectively
+            test_tokens = torch.tensor(self.dataset.encode(self.test_input), dtype=torch.long, device=self.device).unsqueeze(0)
+            aligned_output = self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist())
+            reference_output = self.dataset.decode(reference_model.generate(test_tokens, max_new_tokens=100)[0].tolist())
+            # Truncate the output to the end-of-text character '\0'
+            aligned_output = aligned_output[:aligned_output.find('\0')]
+            reference_output = reference_output[:reference_output.find('\0')]
+            print('Generate a complete poem for title 月色:')
+            print('Aligned model:')
+            print(aligned_output[len(self.test_input):])
+            print('Reference model:')
+            print(reference_output[len(self.test_input):])
+
+        # Accumulate the training loss and reward margin
+        self.train_loss_sum += train_loss
+        self.train_reward_margin_sum += train_reward_margin
+
+    @torch.no_grad()
+    def evaluate_alignment_loss(self, model: TutorialLLM, reference_model: TutorialLLM, beta: float = 0.1):
+        loss_sum = 0
+        reward_margin_sum = 0
+        # Get a batch generator of finetune data
+        batch_generator = self.dataset.get_batch_generator_alignment('evaluate')
+        # Evaluate the model by processing all batches generated by the generator
+        for k, batch in enumerate(batch_generator):
+            positive_inputs, positive_labels, negative_inputs, negative_labels = batch
+
+            positive_logits, positive_loss = model(positive_inputs, positive_labels, False)
+            negative_logits, negative_loss = model(negative_inputs, negative_labels, False)
+            reference_positive_logits, reference_positive_loss = reference_model(positive_inputs, positive_labels)
+            reference_negative_logits, reference_negative_loss = reference_model(negative_inputs, negative_labels)
+
+            # Implement the DPO(Direct Preference Optimiazation) loss
+            positive_distance = (positive_loss - reference_positive_loss)
+            negative_distance = (negative_loss - reference_negative_loss)
+            reward_margin = negative_distance - positive_distance
+            loss = - F.logsigmoid(beta * reward_margin).mean()
+            reward_margin = reward_margin.mean()
+
+            loss_sum += loss.item()
+            reward_margin_sum += reward_margin.item()
+        loss = loss_sum / (k + 1)
+        reward_margin = reward_margin_sum / (k + 1)
+        return loss, reward_margin

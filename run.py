@@ -44,7 +44,7 @@ interval_to_evaluate_finetune = 50
 # The interval of iterations to evaluate the alignment process
 interval_to_evaluate_alignment = 50
 # Create an Evaluator instance to evaluate the performance during training
-evaluator = Evaluator(model, dataset, device, iterations_to_evaluate_pretrain, interval_to_evaluate_pretrain, interval_to_evaluate_finetune, interval_to_evaluate_alignment)
+evaluator = Evaluator(dataset, device, iterations_to_evaluate_pretrain, interval_to_evaluate_pretrain, interval_to_evaluate_finetune, interval_to_evaluate_alignment)
 # Create a Trainer instance for susequent training
 trainer = Trainer(model, dataset, evaluator, device)
 
@@ -52,16 +52,17 @@ print(f'{"-"*50}\nSTAGE 3: PRETRAIN')
 # The number of iterations for pretrain (each iteration processes a batch)
 iterations_for_pretrain = 500
 # Pretrain the model
-trainer.pretrain(iterations_for_pretrain, interval_to_evaluate_pretrain, iterations_to_evaluate_pretrain)
+trainer.pretrain(iterations_for_pretrain)
 
 print(f'{"-"*50}\nSTAGE 4: FINETUNE')
 # The number of epochs to finetune the model
 epochs_for_finetune = 1
 # Finetune the model
-trainer.finetune(epochs_for_finetune, interval_to_evaluate_finetune)
+trainer.finetune(epochs_for_finetune)
 
-print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
-# The number of epochs to align the model
-epochs_for_alignment = 1
+# print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
+# # The number of epochs to align the model
+# epochs_for_alignment = 1
 # # Align the model with human preference
-# trainer.align(epochs_for_alignment, interval_to_evaluate_alignment)
+# trainer.model = torch.load('model_finetune.pth')
+# trainer.align(epochs_for_alignment)
