@@ -38,7 +38,6 @@ class Trainer():
             optimizer.step()
 
         print('Save the pretrained model...')
-        # Save model to file
         torch.save(self.model, 'model_pretrain.pth')
 
     def finetune(self, epochs):
@@ -61,7 +60,6 @@ class Trainer():
                 optimizer.step()
 
         print('Save the finetuned model...')
-        # Save model to file
         torch.save(self.model, 'model_finetune.pth')
 
     def align(self, epochs):
@@ -83,16 +81,18 @@ class Trainer():
                     reference_negative_logits, reference_negative_loss = reference_model(negative_inputs, negative_labels, False)
 
                 # Implement the DPO(Direct Preference Optimiazation) loss
-                positive_distance = (positive_loss - reference_positive_loss)
-                negative_distance = (negative_loss - reference_negative_loss)
-                reward_margin = negative_distance - positive_distance
+                positive_reward = reference_positive_loss - positive_loss
+                negative_reward = negative_loss - reference_negative_loss
+                reward_margin = positive_reward + negative_reward
                 loss = - F.logsigmoid(beta * reward_margin).mean()
-                reward_margin = reward_margin.mean()
 
                 # Evaluate the model every evaluation_interval iterations
-                self.evaluator.evaluate_alignment(self.model, epoch, i, loss.item(), reward_margin.item(), reference_model)
+                self.evaluator.evaluate_alignment(self.model, epoch, i, loss.item(), reward_margin.mean().item(), reference_model)
 
                 # Backward pass and update the model
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
                 optimizer.step()
+
+        print('Save the aligned model...')
+        torch.save(self.model, 'model_aligned.pth')
