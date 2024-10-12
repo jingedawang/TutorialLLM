@@ -69,6 +69,8 @@ class Trainer():
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
         # A hyperparameter to control the strength of the alignment loss, larger beta means stronger alignment
         beta = 0.1
+        positive_weight = 0.8
+        negative_weight = 0.2
         for epoch in range(epochs):
             # Reset the evaluator to clear the loss history for each epoch
             self.evaluator.reset()
@@ -83,7 +85,7 @@ class Trainer():
                 # Implement the DPO(Direct Preference Optimiazation) loss
                 positive_reward = reference_positive_loss - positive_loss
                 negative_reward = negative_loss - reference_negative_loss
-                reward_margin = positive_reward + negative_reward
+                reward_margin = positive_weight * positive_reward + negative_weight * negative_reward
                 loss = - F.logsigmoid(beta * reward_margin).mean()
 
                 # Evaluate the model every evaluation_interval iterations
