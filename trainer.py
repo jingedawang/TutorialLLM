@@ -66,7 +66,7 @@ class Trainer():
         # Load an extra finetuned model as reference model. The reference model is fixed during alignment.
         reference_model = torch.load('model_finetune.pth')
         # Reset the optimizer
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=self.learning_rate)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=1e-5)
         # A hyperparameter to control the strength of the alignment loss, larger beta means stronger alignment
         beta = 0.1
         positive_weight = 0.8

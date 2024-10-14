@@ -15,7 +15,7 @@ class Evaluator():
         self.interval_to_evaluate_finetune = interval_to_evaluate_finetune
         self.interval_to_evaluate_alignment = interval_to_evaluate_alignment
 
-        self.test_input = '<INS>請用以下題目寫一首詩<INP>月色<RES>'
+        self.test_input = '<INS>請用以下題目寫一首詩<INP>春夜喜雨<RES>'
 
         self.reset()
     
@@ -32,9 +32,9 @@ class Evaluator():
             evaluate_loss = self.evaluate_pretrain_loss(model, self.iterations_to_evaluate_pretrain)
             print(f"Step {iteration}, train loss {mean_loss_train:.4f}, evaluate loss {evaluate_loss:.4f}")
 
-            # Let's generate a poem starting with the word '月' to see how the model is doing
-            test_tokens = torch.tensor(self.dataset.encode('月'), dtype=torch.long, device=self.device).unsqueeze(0)
-            print('Generate first 100 characters of poems starting with 月:')
+            # Let's generate a poem starting with the title '春夜喜雨' to see how the model is doing
+            test_tokens = torch.tensor(self.dataset.encode('春夜喜雨'), dtype=torch.long, device=self.device).unsqueeze(0)
+            print('Generate first 100 characters of poems starting with 春夜喜雨:')
             print(self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
         
         # Accumulate the training loss
@@ -66,7 +66,7 @@ class Evaluator():
             output = self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist())
             # Truncate the output to the end-of-text character '\0'
             output = output[:output.find('\0')]
-            print('Generate a complete poem for title 月色:')
+            print('Generate a complete poem for title 春夜喜雨:')
             print(output[len(self.test_input):])
         
         # Accumulate the training loss
@@ -102,7 +102,7 @@ class Evaluator():
             # Truncate the output to the end-of-text character '\0'
             aligned_output = aligned_output[:aligned_output.find('\0')]
             reference_output = reference_output[:reference_output.find('\0')]
-            print('Generate a complete poem for title 月色:')
+            print('Generate a complete poem for title 春夜喜雨:')
             print('Aligned model:')
             print(aligned_output[len(self.test_input):])
             print('Reference model:')
