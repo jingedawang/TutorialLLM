@@ -1,3 +1,4 @@
+import copy
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -244,6 +245,9 @@ class TutorialLLM(nn.Module):
             labels: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
                 The tensor contains the groundtruth token ids of the target sequences. If None, the model
                 will not compute the loss.
+
+        Returns:
+            The cross entropy loss if the labels are provided, otherwise `None`.
         """
         B, T = token_ids.shape
         # Get the token embedding and position embedding
@@ -284,7 +288,7 @@ class TutorialLLM(nn.Module):
             # Crop the input sequence to if it exceeds the maximum length
             token_ids_available = token_ids[:, -self.max_length:]   # (B, T) -> (B, T'), where T' = min(T, max_length)
             # Run the model to get the logits
-            logits, loss = self(token_ids_available)                # (B, T') -> (B, T', vocabulary_size)
+            logits, _ = self(token_ids_available)                   # (B, T') -> (B, T', vocabulary_size)
             # Pick the logits of the last token where the next token should be predicted
             logits = logits[:, -1, :]                               # (B, T', vocabulary_size) -> (B, vocabulary_size)
             # Apply softmax to get probabilities
@@ -297,3 +301,64 @@ class TutorialLLM(nn.Module):
             if idx_next.item() == 0:
                 break
         return token_ids
+
+class DpoWrapper():
+    """
+    Direct Preference Optimization wrapper.
+
+    This module wraps the aligned model and the reference model to compute the DPO loss.
+    Note that this class is not a subclass of `nn.Module`, so you cannot call it directly.
+    Instead, you should call `forward` method manually to compute the DPO loss.
+    """
+
+    def __init__(self, model: TutorialLLM, beta: float = 0.1, positive_weight: float = 0.8) -> None:
+        """
+        Initialize the wrapper with the aligned model and the hyperparameters.
+
+        Args:
+            model: The finetuned model to optimize.
+            beta: The hyperparameter to control the strength of the alignment loss.
+            positive_weight: The weight of the positive reward in the DPO loss. It should be in [0, 1].
+        """
+        self.aligned_model = model
+        self.beta = beta
+        self.positive_weight = positive_weight
+        self.negative_weight = 1 - positive_weight
+        # Clone the model to create a reference model for DPO
+        self.reference_model = copy.deepcopy(model)
+
+    def forward(self, positive_token_ids: Tensor, positive_labels: Tensor, negative_token_ids: Tensor, negative_labels: Tensor):
+        """
+        Forward pass for the two models to compute the DPO loss.
+
+        Args:
+            positive_token_ids: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
+                The tensor contains the token ids of the positive input sequences.
+            positive_labels: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
+                The tensor contains the groundtruth token ids of the positive target sequences.
+            negative_token_ids: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
+                The tensor contains the token ids of the negative input sequences.
+            negative_labels: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
+                The tensor contains the groundtruth token ids of the negative target sequences.
+            beta: The hyperparameter to control the strength of the alignment loss.
+
+        Returns:
+            The DPO loss.
+        """
+        # Forward pass the positive and negative samples on aligned model and reference model
+        _, positive_loss = self.aligned_model(positive_token_ids, positive_labels, False)
+        _, negative_loss = self.aligned_model(negative_token_ids, negative_labels, False)
+        with torch.no_grad():
+            _, reference_positive_loss = self.reference_model(positive_token_ids, positive_labels, False)
+            _, reference_negative_loss = self.reference_model(negative_token_ids, negative_labels, False)
+
+        # Implement the DPO(Direct Preference Optimiazation) loss
+        positive_reward = reference_positive_loss - positive_loss
+        negative_reward = negative_loss - reference_negative_loss
+        # We choose different weights for positive and negative rewards. In our case, we set higher
+        # weight for positive reward to avoid degradation of the model performance on positive samples.
+        # The degradation problem is common in DPO, where the model tends to optimize the negative rewards
+        # more than the positive rewards because it's much easier to perform worse on negative samples.
+        reward_margin = self.positive_weight * positive_reward + self.negative_weight * negative_reward
+        loss = - F.logsigmoid(self.beta * reward_margin).mean()
+        return loss, reward_margin.mean()

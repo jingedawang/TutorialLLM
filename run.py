@@ -60,9 +60,8 @@ epochs_for_finetune = 1
 # Finetune the model
 trainer.finetune(epochs_for_finetune)
 
-# print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
-# # The number of epochs to align the model
-# epochs_for_alignment = 1
-# # Align the model with human preference
-# trainer.model = torch.load('model_finetune.pth')
-# trainer.align(epochs_for_alignment)
+print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
+# The number of epochs to align the model
+epochs_for_alignment = 1
+# Align the model with human preference
+trainer.align(epochs_for_alignment)
