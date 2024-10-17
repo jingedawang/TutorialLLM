@@ -50,18 +50,18 @@ trainer = Trainer(model, dataset, evaluator, device)
 
 print(f'{"-"*50}\nSTAGE 3: PRETRAIN')
 # The number of iterations for pretrain (each iteration processes a batch)
-iterations_for_pretrain = 500
+iterations_for_pretrain = 5000
 # Pretrain the model
 trainer.pretrain(iterations_for_pretrain)
 
 print(f'{"-"*50}\nSTAGE 4: FINETUNE')
 # The number of epochs to finetune the model
-epochs_for_finetune = 1
+epochs_for_finetune = 10
 # Finetune the model
 trainer.finetune(epochs_for_finetune)
 
 print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
 # The number of epochs to align the model
-epochs_for_alignment = 1
+epochs_for_alignment = 5
 # Align the model with human preference
 trainer.align(epochs_for_alignment)

@@ -72,46 +72,20 @@ class Dataset():
         print('The instruction finetune data is a list of formatted texts. Here is the first item:')
         print(finetune_texts[0])
 
-        # Get the frequency dict of the characters in the poems
-        character_freq = {}
-        for poetry in poems:
-            for paragraph in poetry['paragraphs']:
-                for character in paragraph:
-                    if character in character_freq:
-                        character_freq[character] += 1
-                    else:
-                        character_freq[character] = 1
-
-        # Sort the alignment_poems by the frequency of the characters in the paragraph
-        alignment_poems_with_freq = []
-        for poetry in alignment_poems:
-            character_set = set([character for paragraph in poetry['paragraphs'] for character in paragraph])
-            # Remove , and 。 from the character set
-            character_set.discard('，')
-            character_set.discard('。')
-            alignment_poems_with_freq.append((poetry, sum([character_freq[character] for character in character_set]) / len(character_set)))
-        alignment_poems = sorted(alignment_poems_with_freq, key=lambda x: x[1], reverse=True)
-        # Split the alignment data into 5:5 for positive and negative samples
-        # TODO: Generate pair by sampling from two sets. Use iteration instead of epoch.
-        half_length = int(len(alignment_poems)*0.5)
-        positive_poems = alignment_poems[:half_length]
-        negative_poems = alignment_poems[half_length:half_length*2]
-        random.shuffle(positive_poems)
-        random.shuffle(negative_poems)
+        # Reformat alignment data.
+        # The end character of each paragraph will be replaced by a random character from other paragraphs as the negative sample.
+        # This stage is used to let the model learn the phonetic structure of the poem.
         alignment_texts = []
-        # Pair the positive poems with negative poems and reform the alignment data
-        for i in range(half_length):
-            positive_poetry = positive_poems[i][0]
-            negative_poetry = negative_poems[i][0]
-            positive_paragraphs = '\n'.join(positive_poetry['paragraphs'])
-            negative_paragraphs = '\n'.join(negative_poetry['paragraphs'])
-            positive_content = f'{instruction_label}{instruction}{input_label}{positive_poetry["title"]}{response_label}{positive_paragraphs}'
-            negative_content = f'{instruction_label}{instruction}{input_label}{negative_poetry["title"]}{response_label}{negative_paragraphs}'
-            alignment_texts.append((positive_content, negative_content))
-
-        # Reformat alignment data. Each poem is paired with a negative sample
-        # whose paragraph is replaced by a random paragraph from other poems.
-        # The target of this stage is to make the model learn how to align the paragraph with the context.
+        for poetry in alignment_poems:
+            positive_paragraphs = poetry['paragraphs']
+            negative_paragraphs = positive_paragraphs.copy()
+            # Randomly choose a paragraph to replace the last character with a random character from other poems
+            random_index = random.randint(0, len(negative_paragraphs)-1)
+            random_paragraph = random.choice([paragraph for paragraph in random.choice(alignment_poems)['paragraphs']])
+            negative_paragraphs[random_index] = negative_paragraphs[random_index][:-2] + random_paragraph[-2] + negative_paragraphs[random_index][-1]
+            positive_paragraphs = '\n'.join(positive_paragraphs)
+            negative_paragraphs = '\n'.join(negative_paragraphs)
+            alignment_texts.append((positive_paragraphs, negative_paragraphs))
         print('The alignment data is a list of positive-negative pairs. Here is the first pair:')
         print(alignment_texts[0])
 
@@ -243,11 +217,7 @@ class Dataset():
         """
         Get a generator to yield batches of alignment data.
 
-        Each item contains a positive-negative pair of poems.
-        The positive pair is the original poem, while the negative pair
-        has at least one paragraph replaced by a random paragraph from other poems.
-        This is used to train the model to learn how to align the paragraph with the context,
-        for example, the phonetic structure of the poem.
+        Data is consumed in a streaming fashion, so the generator will keep yielding batches to form an epoch.
 
         Args:
             split: Indicate whether to generate a batch for training or evaluation ('train' or 'evaluate').
@@ -255,7 +225,6 @@ class Dataset():
         Returns:
             Two group of tensors of shape (batch_size, T) for positive batch and negative batch.
             Each group contains the input tokens and the label tokens.
-
         """
         # All the inputs and labels are initialized to zeros of largest length
         positive_inputs = torch.zeros(self.batch_size, self.max_length, dtype=torch.long)
