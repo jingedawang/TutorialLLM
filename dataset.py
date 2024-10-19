@@ -1,6 +1,8 @@
+from collections.abc import Generator
 import json
 import random
 import torch
+from torch import Tensor
 
 
 class Dataset():
@@ -11,7 +13,7 @@ class Dataset():
     The token id and character mapping is stored in the `encode` and `decode` methods.
     """
 
-    def __init__(self, input_path: str = 'data.json', batch_size: int = 16, max_length: int = 256, device: str = 'cpu'):
+    def __init__(self, input_path: str = 'data.json', batch_size: int = 16, max_length: int = 256, device: str = 'cpu') -> None:
         """
         Initialize the dataset with a JSON file or poems.
 
@@ -52,8 +54,8 @@ class Dataset():
         # the model learn how the poem text looks like.
         pretrain_texts = []
         for poetry in pretrain_poems:
-            positive_paragraphs = '\n'.join(poetry['paragraphs'])
-            pretrain_texts.append(f'{poetry["title"]}\n{positive_paragraphs}')
+            paragraphs_text = '\n'.join(poetry['paragraphs'])
+            pretrain_texts.append(f'{poetry["title"]}\n{paragraphs_text}')
         pretrain_text = '\n\n'.join(pretrain_texts)
         print('The whole pretrain data is a long text with all poems concatenated together. Here are the first 100 characters:')
         print(pretrain_text[:100])
@@ -66,8 +68,8 @@ class Dataset():
         input_label = '<INP>'
         response_label = '<RES>'
         for poetry in finetune_poems:
-            positive_paragraphs = '\n'.join(poetry['paragraphs'])
-            content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{positive_paragraphs}'
+            paragraphs_text = '\n'.join(poetry['paragraphs'])
+            content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{paragraphs_text}'
             finetune_texts.append(content)
         print('The instruction finetune data is a list of formatted texts. Here is the first item:')
         print(finetune_texts[0])
@@ -83,13 +85,15 @@ class Dataset():
             random_index = random.randint(0, len(negative_paragraphs)-1)
             random_paragraph = random.choice([paragraph for paragraph in random.choice(alignment_poems)['paragraphs']])
             negative_paragraphs[random_index] = negative_paragraphs[random_index][:-2] + random_paragraph[-2] + negative_paragraphs[random_index][-1]
-            positive_paragraphs = '\n'.join(positive_paragraphs)
-            negative_paragraphs = '\n'.join(negative_paragraphs)
-            alignment_texts.append((positive_paragraphs, negative_paragraphs))
+            positive_paragraphs_text =  '\n'.join(positive_paragraphs)
+            negative_paragraphs_text = '\n'.join(negative_paragraphs)
+            positive_text = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{positive_paragraphs_text}'
+            negative_text = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{negative_paragraphs_text}'
+            alignment_texts.append((positive_text, negative_text))
         print('The alignment data is a list of positive-negative pairs. Here is the first pair:')
         print(alignment_texts[0])
 
-        # Create a vocabulary from all the characters appeared in the dataset
+        # Create a vocabulary from all the characters appeared in the poems and the instructions.
         # Note that we add a special character '\0' in the end, which is used as an end-of-text token.
         # An end-of-text token is useful to let the model know when to stop generating text.
         all_text = f'{pretrain_text}{"".join(finetune_texts)}{"".join([pair[0] + pair[1] for pair in alignment_texts])}\0'
@@ -100,30 +104,26 @@ class Dataset():
         # Create a mapping from characters to indices and vice versa
         character_to_index = { character: index for index, character in enumerate(characters) }
         index_to_character = { index: character for index, character in enumerate(characters) }
-        # Encode method to convert a text to a list of indices
+        # Encode and decode method to convert between characters and indices
         self.encode = lambda text: [character_to_index[character] for character in text]
-        # Decode method to convert a list of indices back to a text
         self.decode = lambda index_list: ''.join([index_to_character[index] for index in index_list])
 
-        # Train and evaluate splits for pretrain data
+        # Split the pretrain data into 90% train set and 10% evaluate set
         pretrain_data = torch.tensor(self.encode(pretrain_text), dtype=torch.long)
-        # Split the data into 90% train and 10% evaluate
         self.pretrain_train_data = pretrain_data[:int(0.9 * len(pretrain_data))]
         self.pretrain_evaluate_data = pretrain_data[int(0.9 * len(pretrain_data)):]
 
-        # Train and evaluate splits for instruction finetune data
+        # Split the instruction finetune data into 90% train set and 10% evaluate set
         finetune_data = [torch.tensor(self.encode(finetune_text), dtype=torch.long) for finetune_text in finetune_texts]
-        # Split the data into 90% train and 10% evaluate
         self.finetune_train_data = finetune_data[:int(0.9 * len(finetune_data))]
         self.finetune_evaluate_data = finetune_data[int(0.9 * len(finetune_data)):]
 
-        # Train and evaluate splits for alignment data
+        # Split the alignment data into 90% train set and 10% evaluate set
         alignment_data = [(torch.tensor(self.encode(pair[0]), dtype=torch.long), torch.tensor(self.encode(pair[1]), dtype=torch.long)) for pair in alignment_texts]
-        # Split the data into 90% train and 10% evaluate
         self.alignment_train_data = alignment_data[:int(0.9 * len(alignment_data))]
         self.alignment_evaluate_data = alignment_data[int(0.9 * len(alignment_data)):]
 
-    def get_batch_pretrain(self, split: str):
+    def get_batch_pretrain(self, split: str) -> tuple[Tensor, Tensor]:
         """
         Generate a batch of pretrain data.
 
@@ -151,7 +151,7 @@ class Dataset():
         # Move the tensors to the device and return
         return inputs.to(self.device), labels.to(self.device)
 
-    def get_batch_generator_finetune(self, split: str):
+    def get_batch_generator_finetune(self, split: str) -> Generator[tuple[Tensor, Tensor], None, None]:
         """
         Get a generator to yield batches of instruction finetune data.
 
@@ -184,36 +184,7 @@ class Dataset():
             inputs, labels = self.process_batch(batch)
             yield inputs.to(self.device), labels.to(self.device)
 
-    def process_batch(self, batch: list):
-        """
-        Process a batch of instruction finetune data.
-
-        Args:
-            batch: A list of token id lists, where each list is a poem represented by token ids.
-
-        Returns:
-            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence
-        """
-        # All the inputs and labels are initialized to zeros of largest length
-        inputs = torch.zeros(len(batch), self.max_length, dtype=torch.long)
-        labels = torch.zeros(len(batch), self.max_length, dtype=torch.long)
-        for i, item in enumerate(batch):
-            # Assign the actual values to the zeros-initialized tensors
-            available_length = len(item) if len(item) < self.max_length else self.max_length
-            inputs[i, :available_length] = item[:available_length]
-            # The same format as pretrain data, the label is the next character of the input
-            labels[i, :available_length-1] = item[1:available_length]
-
-            # Mask all the remaining zeros by setting them to -100 (the loss function will ignore these tokens)
-            mask = labels[i] == 0
-            indices = torch.nonzero(mask).squeeze()
-            # Check if there are more than one zeros in the label
-            if indices.numel() > 1:
-                # Exclude the first zero because it marks the end of the text
-                labels[i, indices[1:]] = -100
-        return inputs, labels
-
-    def get_batch_generator_alignment(self, split: str):
+    def get_batch_generator_alignment(self, split: str) -> Generator[tuple[Tensor, Tensor, Tensor, Tensor], None, None]:
         """
         Get a generator to yield batches of alignment data.
 
@@ -252,3 +223,32 @@ class Dataset():
             positive_inputs, positive_labels = self.process_batch([item[0] for item in batch])
             negative_inputs, negative_labels = self.process_batch([item[1] for item in batch])
             yield positive_inputs.to(self.device), positive_labels.to(self.device), negative_inputs.to(self.device), negative_labels.to(self.device)
+
+    def process_batch(self, batch: list) -> tuple[Tensor, Tensor]:
+        """
+        Process a batch of token id lists.
+
+        Args:
+            batch: A list of token id lists, where each list is a poem represented by token ids.
+
+        Returns:
+            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence
+        """
+        # All the inputs and labels are initialized to zeros of largest length
+        inputs = torch.zeros(len(batch), self.max_length, dtype=torch.long)
+        labels = torch.zeros(len(batch), self.max_length, dtype=torch.long)
+        for i, item in enumerate(batch):
+            # Assign the actual values to the zeros-initialized tensors
+            available_length = len(item) if len(item) < self.max_length else self.max_length
+            inputs[i, :available_length] = item[:available_length]
+            # The same format as pretrain data, the label is the next character of the input
+            labels[i, :available_length-1] = item[1:available_length]
+
+            # Mask all the remaining zeros by setting them to -100 (the loss function will ignore these tokens)
+            mask = labels[i] == 0
+            indices = torch.nonzero(mask).squeeze()
+            # Check if there are more than one zeros in the label
+            if indices.numel() > 1:
+                # Exclude the first zero because it marks the end of the text
+                labels[i, indices[1:]] = -100
+        return inputs, labels

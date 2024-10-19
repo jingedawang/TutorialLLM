@@ -1,4 +1,5 @@
 import copy
+from typing import Optional
 import torch
 import torch.nn as nn
 from torch.nn import functional as F
@@ -17,7 +18,7 @@ class AttentionHead(nn.Module):
     The attention mechanism refers to the famous transformer paper "Attention is All You Need".
     """
 
-    def __init__(self, dim_embed: int, head_size: int, max_length: int):
+    def __init__(self, dim_embed: int, head_size: int, max_length: int) -> None:
         """
         Initialize the module with 3 linear layers and a mask buffer.
 
@@ -38,7 +39,7 @@ class AttentionHead(nn.Module):
         # which means that each token can only see the previous tokens but not the future tokens.
         self.register_buffer('tril', torch.tril(torch.ones(max_length, max_length)))
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """
         Compute the self-attention for the input tensor.
 
@@ -75,7 +76,7 @@ class MultiHeadAttention(nn.Module):
     The multi-head self-attention is composed by aggregating the outputs of several `AttentionHead` modules.
     """
 
-    def __init__(self, dim_embed: int, num_heads: int, head_size: int, max_length: int):
+    def __init__(self, dim_embed: int, num_heads: int, head_size: int, max_length: int) -> None:
         """
         Initialize the module with concatenated `AttentionHead`s and a projection layer.
 
@@ -93,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         # this projection layer. But in general, the output of the heads may have different dimension than the input.
         self.project = nn.Linear(head_size * num_heads, dim_embed)
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """
         Compute the multi-head self-attention for the input tensor.
 
@@ -121,7 +122,7 @@ class FeedFoward(nn.Module):
     input tensor.
     """
 
-    def __init__(self, dim_embed: int):
+    def __init__(self, dim_embed: int) -> None:
         """
         Initialize the module with 2 linear layers and a ReLU activation function.
 
@@ -139,7 +140,7 @@ class FeedFoward(nn.Module):
             nn.Linear(4 * dim_embed, dim_embed)
         )
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """
         Compute the output of the feed-forward neural network for the input tensor.
 
@@ -158,7 +159,7 @@ class TranformerBlock(nn.Module):
     sub-module to stabilize the training process.
     """
 
-    def __init__(self, dim_embed: int, num_heads: int, max_length: int):
+    def __init__(self, dim_embed: int, num_heads: int, max_length: int) -> None:
         """
         Initialize the module with a multi-head self-attention, a feed-forward neural network,
         and 2 layer normalization layers.
@@ -179,7 +180,7 @@ class TranformerBlock(nn.Module):
         self.layer_norm1 = nn.LayerNorm(dim_embed)
         self.layer_norm2 = nn.LayerNorm(dim_embed)
 
-    def forward(self, input: Tensor):
+    def forward(self, input: Tensor) -> Tensor:
         """
         Compute the output of the transformer block for the input tensor.
 
@@ -208,7 +209,7 @@ class TutorialLLM(nn.Module):
     It resembles the GPT-2 model but used for educational purposes only.
     """
 
-    def __init__(self, vocabulary_size: int, dim_embed: int, max_length: int, num_head: int, num_layer: int, device: str):
+    def __init__(self, vocabulary_size: int, dim_embed: int, max_length: int, num_head: int, num_layer: int, device: str) -> None:
         """
         Initialize the model with a token embedding table, a position embedding table,
         several transformer blocks, a final layer normalization layer, and a linear layer.
@@ -235,7 +236,7 @@ class TutorialLLM(nn.Module):
         # Create a linear layer to project the output from embedding space to vocabulary space
         self.project = nn.Linear(dim_embed, vocabulary_size)
 
-    def forward(self, token_ids: Tensor, labels: Tensor = None, reduce_loss: bool = True):
+    def forward(self, token_ids: Tensor, labels: Tensor = None, reduce_loss: bool = True) -> tuple[Tensor, Optional[Tensor]]:
         """
         Compute the forward pass of the model.
 
@@ -247,7 +248,7 @@ class TutorialLLM(nn.Module):
                 will not compute the loss.
 
         Returns:
-            The cross entropy loss if the labels are provided, otherwise `None`.
+            The logits of the model and the loss if the labels are provided.
         """
         B, T = token_ids.shape
         # Get the token embedding and position embedding
@@ -275,7 +276,7 @@ class TutorialLLM(nn.Module):
 
         return logits, loss
 
-    def generate(self, token_ids: Tensor, max_new_tokens: int):
+    def generate(self, token_ids: Tensor, max_new_tokens: int) -> Tensor:
         """
         Generate subsequent tokens given the input tokens.
 
@@ -283,6 +284,9 @@ class TutorialLLM(nn.Module):
             token_ids: A tensor of shape (B, T) where B is the batch size and T is the token sequence length.
                 The tensor contains the token ids of the input sequences.
             max_new_tokens: The maximum number of new tokens to generate.
+
+        Returns:
+            A tensor of token ids of generated sequences.
         """
         for _ in range(max_new_tokens):
             # Crop the input sequence to if it exceeds the maximum length
@@ -327,7 +331,7 @@ class DpoWrapper():
         # Clone the model to create a reference model for DPO
         self.reference_model = copy.deepcopy(model)
 
-    def forward(self, positive_token_ids: Tensor, positive_labels: Tensor, negative_token_ids: Tensor, negative_labels: Tensor):
+    def forward(self, positive_token_ids: Tensor, positive_labels: Tensor, negative_token_ids: Tensor, negative_labels: Tensor) -> tuple[Tensor, Tensor]:
         """
         Forward pass for the two models to compute the DPO loss.
 
@@ -343,7 +347,7 @@ class DpoWrapper():
             beta: The hyperparameter to control the strength of the alignment loss.
 
         Returns:
-            The DPO loss.
+            The DPO loss and the reward margin.
         """
         # Forward pass the positive and negative samples on aligned model and reference model
         _, positive_loss = self.aligned_model(positive_token_ids, positive_labels, False)

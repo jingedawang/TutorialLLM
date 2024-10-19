@@ -30,7 +30,7 @@ num_head = 4
 num_layer = 4
 # Create a TutorialLLM instance
 model = TutorialLLM(dataset.vocabulary_size, dim_embedding, max_length, num_head, num_layer, device)
-# Switch the model to training mode
+# Switch the model to training mode and move the data to the specified device
 model.train()
 model.to(device)
 # Show the model size
@@ -50,7 +50,7 @@ trainer = Trainer(model, dataset, evaluator, device)
 
 print(f'{"-"*50}\nSTAGE 3: PRETRAIN')
 # The number of iterations for pretrain (each iteration processes a batch)
-iterations_for_pretrain = 5000
+iterations_for_pretrain = 15000
 # Pretrain the model
 trainer.pretrain(iterations_for_pretrain)
 
@@ -61,7 +61,7 @@ epochs_for_finetune = 10
 trainer.finetune(epochs_for_finetune)
 
 print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
-# The number of epochs to align the model
-epochs_for_alignment = 5
-# Align the model with human preference
+# The number of epochs to align the model with our preference
+epochs_for_alignment = 10
+# Align the model with our preference
 trainer.align(epochs_for_alignment)
