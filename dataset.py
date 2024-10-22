@@ -53,42 +53,44 @@ class Dataset():
         # We don't care about the format in pretrain stage. This data is just used to make
         # the model learn how the poem text looks like.
         pretrain_texts = []
-        for poetry in pretrain_poems:
-            paragraphs_text = '\n'.join(poetry['paragraphs'])
-            pretrain_texts.append(f'{poetry["title"]}\n{paragraphs_text}')
+        for poem in pretrain_poems:
+            paragraphs_text = '\n'.join(poem['paragraphs'])
+            pretrain_texts.append(f'{poem["title"]}\n{paragraphs_text}')
         pretrain_text = '\n\n'.join(pretrain_texts)
         print('The whole pretrain data is a long text with all poems concatenated together. Here are the first 100 characters:')
         print(pretrain_text[:100])
 
-        # Reformat instruction finetune data. Each poem is formatted as an instruction-response pair.
-        # The target of this stage is to fix the format of the poems generate by the model.
+        # Reformat instruction finetune data.
+        # Each poem is formatted as an instruction-response pair.
         finetune_texts = []
         instruction = '請用以下題目寫一首詩'
         instruction_label = '<INS>'
         input_label = '<INP>'
         response_label = '<RES>'
-        for poetry in finetune_poems:
-            paragraphs_text = '\n'.join(poetry['paragraphs'])
-            content = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{paragraphs_text}'
+        for poem in finetune_poems:
+            paragraphs_text = '\n'.join(poem['paragraphs'])
+            content = f'{instruction_label}{instruction}{input_label}{poem["title"]}{response_label}{paragraphs_text}'
             finetune_texts.append(content)
         print('The instruction finetune data is a list of formatted texts. Here is the first item:')
         print(finetune_texts[0])
 
         # Reformat alignment data.
-        # The end character of each paragraph will be replaced by a random character from other paragraphs as the negative sample.
-        # This stage is used to let the model learn the phonetic structure of the poem.
+        # Alignment data includes a positive-negative pair of poems.
+        # The positive poem is a five-words poem, while the negative poem is a random non-five-words poem.
+        five_words_poems = []
+        other_poems = []
+        for poem in alignment_poems:
+            if all(len(paragraph) == 12 for paragraph in poem['paragraphs']):
+                five_words_poems.append(poem)
+            else:
+                other_poems.append(poem)
         alignment_texts = []
-        for poetry in alignment_poems:
-            positive_paragraphs = poetry['paragraphs']
-            negative_paragraphs = positive_paragraphs.copy()
-            # Randomly choose a paragraph to replace the last character with a random character from other poems
-            random_index = random.randint(0, len(negative_paragraphs)-1)
-            random_paragraph = random.choice([paragraph for paragraph in random.choice(alignment_poems)['paragraphs']])
-            negative_paragraphs[random_index] = negative_paragraphs[random_index][:-2] + random_paragraph[-2] + negative_paragraphs[random_index][-1]
-            positive_paragraphs_text =  '\n'.join(positive_paragraphs)
-            negative_paragraphs_text = '\n'.join(negative_paragraphs)
-            positive_text = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{positive_paragraphs_text}'
-            negative_text = f'{instruction_label}{instruction}{input_label}{poetry["title"]}{response_label}{negative_paragraphs_text}'
+        for positive_poem in five_words_poems:
+            negative_poem = random.choice(other_poems)
+            positive_paragraphs_text =  '\n'.join(positive_poem['paragraphs'])
+            negative_paragraphs_text = '\n'.join(negative_poem['paragraphs'])
+            positive_text = f'{instruction_label}{instruction}{input_label}{positive_poem["title"]}{response_label}{positive_paragraphs_text}'
+            negative_text = f'{instruction_label}{instruction}{input_label}{negative_poem["title"]}{response_label}{negative_paragraphs_text}'
             alignment_texts.append((positive_text, negative_text))
         print('The alignment data is a list of positive-negative pairs. Here is the first pair:')
         print(alignment_texts[0])

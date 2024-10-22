@@ -49,19 +49,24 @@ evaluator = Evaluator(dataset, device, iterations_to_evaluate_pretrain, interval
 trainer = Trainer(model, dataset, evaluator, device)
 
 print(f'{"-"*50}\nSTAGE 3: PRETRAIN')
+print("In this stage, the model will learn the basic knowledge of how to write poems.\n")
 # The number of iterations for pretrain (each iteration processes a batch)
-iterations_for_pretrain = 15000
+iterations_for_pretrain = 5000
 # Pretrain the model
 trainer.pretrain(iterations_for_pretrain)
 
 print(f'{"-"*50}\nSTAGE 4: FINETUNE')
+print("In this stage, the model will learn to generate poems based on the instruction.")
+print("In our case, we ask the model to generate a poem with a given title.\n")
 # The number of epochs to finetune the model
-epochs_for_finetune = 10
+epochs_for_finetune = 5
 # Finetune the model
 trainer.finetune(epochs_for_finetune)
 
 print(f'{"-"*50}\nSTAGE 5: ALIGN PREFERENCE')
+print("In this stage, the model will learn to generate poems that we prefer.")
+print("In our case, we prefer five-words poems than other poems.\n")
 # The number of epochs to align the model with our preference
-epochs_for_alignment = 10
+epochs_for_alignment = 3
 # Align the model with our preference
 trainer.align(epochs_for_alignment)
