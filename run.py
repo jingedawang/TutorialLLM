@@ -20,6 +20,8 @@ print('Check a batch of pretrain data:')
 print(dataset.get_batch_pretrain('train'))
 print('Check a batch of finetune data:')
 print(next(dataset.get_batch_generator_finetune('train')))
+print('Check a batch of alignment data:')
+print(next(dataset.get_batch_generator_alignment('train')))
 
 print(f'{"-"*50}\nSTAGE 2: TRAINING CONFIGURATION')
 # The dimension of the embedding vector in the transformer
@@ -51,7 +53,7 @@ trainer = Trainer(model, dataset, evaluator, device)
 print(f'{"-"*50}\nSTAGE 3: PRETRAIN')
 print("In this stage, the model will learn the basic knowledge of how to write poems.\n")
 # The number of iterations for pretrain (each iteration processes a batch)
-iterations_for_pretrain = 5000
+iterations_for_pretrain = 20000
 # Pretrain the model
 trainer.pretrain(iterations_for_pretrain)
 
