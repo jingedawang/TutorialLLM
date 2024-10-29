@@ -3,13 +3,13 @@
 This tutorial will guide you through the process of training a large language model (LLM) step
 by step. For educational purposes, we choosed a small dataset and a small model, but the basic principles we want to convey is the same with larger models.
 
-There are 2 ways for you to learn:
+We provide a tutorial book and a code implementation. You can read the book to understand the theory and run the code to see the practice. The code is well-documented and easy to understand. You can run it on your local machine or in Google Colab.
 
-- Run the notebook in Google Colab. With Google Colab, everyone can train an LLM from scratch with just a browser. To be done.
-- Run the `run.py` script on your local machine. All code is well-documented and easy to understand.
+## Book
 
-Note that a free GPU like T4 in Google Colab is enough for the default setting. If you want to
-run it with only CPU, you may need to reduce training iterations or epochs to avoid long waiting time.
+Read the book [here](https://jingedawang.gitbook.io/tutorialllm).
+
+The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome to contribute to the book by submitting a pull request.
 
 ## Run locally
 
