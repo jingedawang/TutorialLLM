@@ -113,12 +113,12 @@ It shows the pretrain, finetune, alignment data in text and tensor format to giv
 --------------------------------------------------
 STAGE 2: TRAINING CONFIGURATION
 Our model has 1.318372 M parameters
---------------------------------------------------
 ```
 
 **In stage 3**, we pretrain the model. You will see output like this:
 
 ```
+--------------------------------------------------
 STAGE 3: PRETRAIN
 In this stage, the model will learn the basic knowledge of how to write poems.
 
@@ -239,9 +239,9 @@ Generate a complete poem for title 春夜喜雨:
 媿對閑衣立，終何見去心。
 ```
 
-In the pretrain stage, the model doesn't have a concept of one poem. It just learns to generate texts that resemble poems endlessly. In the finetune stage, we ask the model to generate a poem with a given title. You can see the model learns to generate a poem in a correct format after finetuning, and the topic of the generated poem is gradually closer to the given title.
+In the previous pretrain stage, the model doesn't have a concept of one poem. It just learns to generate texts that resemble poems endlessly. In the finetune stage, we ask the model to generate a poem with a given title. You can see the model learns to generate a poem in a correct format after finetuning, and the topic of the generated poem is gradually closer to the given title.
 
-**In stage 5**, we align the model to a specific preference of me. I like 5-word poems than others. By providing the positive-negative pairs, the model will learn to generate poems more like the positive ones, which are 5-word poems in this case. You will see output like this:
+**In stage 5**, we align the model to a specific preference of myself. I like 5-word poems than others. By providing the positive-negative pairs, the model will learn to generate poems more like the positive ones, which are 5-word poems in this case. You will see output like this:
 
 ```
 --------------------------------------------------
