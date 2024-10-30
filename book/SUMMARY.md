@@ -10,4 +10,5 @@
   * [2.1 目标](2.-kai-shi-xing-dong/2.1-mu-biao.md)
   * [2.2 从数据出发](2.-kai-shi-xing-dong/2.2-cong-shu-ju-chu-fa.md)
   * [2.3 从文本到数字](2.-kai-shi-xing-dong/2.3-cong-wen-ben-dao-shu-zi.md)
+  * [2.4 搭建模型](2.-kai-shi-xing-dong/2.4-da-jian-mo-xing.md)
 * [3. 新的起点](3.-xin-de-qi-dian.md)
