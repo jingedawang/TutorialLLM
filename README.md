@@ -9,7 +9,7 @@ We provide a tutorial book and a code implementation. You can read the book to u
 
 Read the book [here](https://jingedawang.gitbook.io/tutorialllm).
 
-The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome to contribute to the book by submitting a pull request.
+The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome any feedback or contribution through issues or pull requests.
 
 ## Run locally
 
@@ -125,10 +125,6 @@ In this stage, the model will learn the basic knowledge of how to write poems.
 Step 0, train loss 0.0000, evaluate loss 9.2029
 Generate first 100 characters of poems starting with 春夜喜雨:
 春夜喜雨墻鵷函媵分塏潏鍳母付菱莽换驃慚憮儲躕袗鯆溫沲芳罔窻倏菂弓匌莿尚茸茇培嵍鵝掣卵耽敧青魄叚𪆟瞑唱鄢懅齧泉綘躅鷂㦬烻超玃鯽敝俱惏廏鐐處翻矼奭媼悟出撾孃詠可碙媌鶂旐垤嵼鶤柘輩噇篲詮擲憇純絃蜘儔緬簇澎雨搰褚磐歙
-Step 50, train loss 7.3531, evaluate loss 6.4029
-Generate first 100 characters of poems starting with 春夜喜雨:
-春夜喜雨師馬黃仙閣驅柟春處蹤，有牓壽兄忍。羅，。私肯崿再𩭝西森陽城遠裘鶴艋下兩道是爰知不亥不魈人明留窗人閑。之起索櫝郊曾從。達玉疥是杲始載箋聽頭高壓菼岧緱亦未楚遠雀採引皞羌難不是光一昏興衝時館風煙相
-蚑懷，匙
 Step 100, train loss 6.3026, evaluate loss 6.2829
 Generate first 100 characters of poems starting with 春夜喜雨:
 春夜喜雨剡冰 閒路。耕銅崔出玫胖，上惺尋。
@@ -143,29 +139,10 @@ Generate first 100 characters of poems starting with 春夜喜雨:
 ，年陽下了行爭癥追赤且木少塞是門相。
 摘言迎來夢賦示營似吾首。
 暮墜鬢纔征蕉春崖五牀
-Step 150, train loss 6.2464, evaluate loss 6.2476
-Generate first 100 characters of poems starting with 春夜喜雨:
-春夜喜雨持花閑此若秋俊送雪紐成醲，外勞寄應是，君見。
-涼懷堂乣聖片象聞國天繁。獨道襟繁，送時會錫唯勉在壇莧，重，崔魂谷道涯，侶奧處持教山搖詠是純葉訪應，上五幽泉人問，六，物子彩似坐親樂公，掃舊被。
-
-懷九。
 
 <Omit many iterations here...>
 
 Step 5000, train loss 4.7134, evaluate loss 4.9221
-Generate first 100 characters of poems starting with 春夜喜雨:
-春夜喜雨食。
-忽道厭談師，唯愁意日來。
-堪聲古升寶，擁藥餌故鄉。
-
-詩上三飲讚
-南窮多遠暫令，竹不肯繼神仙。
-心秖僊司衡水，再社葩上如蛇。
-
-迴州韓山莊德竇詠
-呂水前李聖，閑田早阻還。
-揮華凌虛牖，宛賜灼灼場
-Step 5050, train loss 4.7137, evaluate loss 4.8862
 Generate first 100 characters of poems starting with 春夜喜雨:
 春夜喜雨發早，唯應尋與塵遠山。
 尋敬況皆迷情重，見買腰量漢寒宵。
@@ -188,18 +165,6 @@ Generate first 100 characters of poems starting with 春夜喜雨:
 
 重夜涼
 自謂長安不速時，當來不得鷓鴣
-Step 10050, train loss 4.4051, evaluate loss 4.6849
-Generate first 100 characters of poems starting with 春夜喜雨:
-春夜喜雨長路，三十年華獨能長。
-
-弔南陽樂府尚書懸圖主鳴澗
-嬌娥泥彊道，立晚託相親。
-聽寺藏鑪壑，幽宮曉雲中。
-蒲門平水雪，梅樹苦溪城。
-即此山雲雨，旅來組命衣。
-
-竹房夜宿諸隱竺使回翔居
-紫泥綠叢訪眼，青繃
 ```
 
 The changes of the generated poems is interesting through the training. At beginning, you can see the generated poem is completely random in the step 0, indicating the model has not learned anything. As the training goes on, the generated poem becomes more and more like a real poem.
@@ -226,17 +191,12 @@ Generate a complete poem for title 春夜喜雨:
 
 <Omit many iterations here...>
 
-Epoch 4, step 750, train loss 3.1965, evaluate loss 3.3496
+Epoch 4, step 800, train loss 3.2089, evaluate loss 3.3451
 Generate a complete poem for title 春夜喜雨:
 山村春色引，雨水曉光斜。
 更問月中鏡，空啼千萬傳。
 隱隱閑臥竹，神盤暗自風。
 殘春望江島，不見磬聲王。
-Epoch 4, step 800, train loss 3.2089, evaluate loss 3.3451
-Generate a complete poem for title 春夜喜雨:
-細落經深掩，披天滴故林。
-南風來雨散，近月深塘催。
-媿對閑衣立，終何見去心。
 ```
 
 In the previous pretrain stage, the model doesn't have a concept of one poem. It just learns to generate texts that resemble poems endlessly. In the finetune stage, we ask the model to generate a poem with a given title. You can see the model learns to generate a poem in a correct format after finetuning, and the topic of the generated poem is gradually closer to the given title.

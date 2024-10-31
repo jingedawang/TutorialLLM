@@ -40,7 +40,7 @@ print(f'Our model has {sum(parameter.numel() for parameter in model.parameters()
 # The number of iterations to evaluate the pretrain process (each iteration processes a batch)
 iterations_to_evaluate_pretrain = 100
 # The interval of iterations to evaluate the pretrain process
-interval_to_evaluate_pretrain = 50
+interval_to_evaluate_pretrain = 100
 # The interval of iterations to evaluate the finetune process
 interval_to_evaluate_finetune = 50
 # The interval of iterations to evaluate the alignment process
