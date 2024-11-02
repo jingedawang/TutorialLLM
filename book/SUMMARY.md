@@ -12,4 +12,5 @@
   * [2.3 从文本到数字](2.-kai-shi-xing-dong/2.3-cong-wen-ben-dao-shu-zi.md)
   * [2.4 搭建模型](2.-kai-shi-xing-dong/2.4-da-jian-mo-xing.md)
   * [2.5 高维语义空间](2.-kai-shi-xing-dong/2.5-gao-wei-yu-yi-kong-jian.md)
+  * [2.6 序列的难题](2.-kai-shi-xing-dong/2.6-xu-lie-de-nan-ti.md)
 * [3. 新的起点](3.-xin-de-qi-dian.md)
