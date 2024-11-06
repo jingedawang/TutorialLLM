@@ -14,4 +14,5 @@
   * [2.5 高维语义空间](2.-kai-shi-xing-dong/2.5-gao-wei-yu-yi-kong-jian.md)
   * [2.6 序列的难题](2.-kai-shi-xing-dong/2.6-xu-lie-de-nan-ti.md)
   * [2.7 注意力机制](2.-kai-shi-xing-dong/2.7-zhu-yi-li-ji-zhi.md)
+  * [2.8 Transformer](2.-kai-shi-xing-dong/2.8-transformer.md)
 * [3. 新的起点](3.-xin-de-qi-dian.md)
