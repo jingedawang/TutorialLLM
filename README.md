@@ -1,19 +1,29 @@
 # Tutorial LLM
 
+[![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb)
+
 This tutorial will guide you through the process of training a large language model (LLM) step
 by step. For educational purposes, we choosed a small dataset and a small model, but the basic principles we want to convey is the same with larger models.
 
-We provide a tutorial book and a code implementation. You can read the book to understand the theory and run the code to see the practice. The code is well-documented and easy to understand. You can run it on your local machine or in Google Colab.
+We provide a tutorial book and a code implementation. You can **read the book** to understand the theory and then **run the code** to see the practice. The code is well-documented and easy to understand.
 
 ## Book
 
-Read the book [here](https://jingedawang.gitbook.io/tutorialllm).
+Click [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm) to read the book.
 
 The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome any feedback or contribution through issues or pull requests.
 
-## Run locally
+## Code
 
-Please install Python 3.12+ and run the following commands:
+### Run with Google Colab
+
+If you don't have any hardware or don't want to setup environment yourself, try use Google Colab.
+Click [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb) to open the notebook in Google Colab.
+
+### Run locally
+
+Please install Python 3.12 and run the following commands:
 
 ```bash
 pip install -r requirements.txt

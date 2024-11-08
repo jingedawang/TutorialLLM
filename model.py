@@ -352,7 +352,7 @@ class DpoWrapper():
         # Forward pass the positive and negative samples on aligned model and reference model
         _, positive_loss = self.aligned_model(positive_token_ids, positive_labels, False)
         _, negative_loss = self.aligned_model(negative_token_ids, negative_labels, False)
-        with torch.no_grad():
+        with torch.inference_mode():
             _, reference_positive_loss = self.reference_model(positive_token_ids, positive_labels, False)
             _, reference_negative_loss = self.reference_model(negative_token_ids, negative_labels, False)
 

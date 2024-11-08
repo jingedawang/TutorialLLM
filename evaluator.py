@@ -40,7 +40,7 @@ class Evaluator():
         self.train_loss_sum = 0
         self.train_reward_margin_sum = 0
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_pretrain(self, model: TutorialLLM, iteration: int, train_loss: float) -> None:
         """
         Evaluate the model performance during the pretrain process.
@@ -69,7 +69,7 @@ class Evaluator():
         # Accumulate the training loss
         self.train_loss_sum += train_loss
     
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_pretrain_loss(self, model: TutorialLLM, iterations: int) -> float:
         """
         Evaluate the model loss during the pretrain process.
@@ -91,7 +91,7 @@ class Evaluator():
         loss = losses.mean()
         return loss
     
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_finetune(self, model: TutorialLLM, epoch: int, iteration: int, train_loss: float) -> None:
         """
         Evaluate the model performance during the finetune process.
@@ -124,7 +124,7 @@ class Evaluator():
         # Accumulate the training loss
         self.train_loss_sum += train_loss
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_finetune_loss(self, model: TutorialLLM) -> float:
         """
         Evaluate the model loss during the finetune process.
@@ -146,7 +146,7 @@ class Evaluator():
         loss = loss_sum / (k + 1)
         return loss
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_alignment(self, dpo_wrapper: DpoWrapper, epoch: int, iteration: int, train_loss: float, train_reward_margin: float) -> None:
         """
         Evaluate the model performance during the alignment process.
@@ -187,7 +187,7 @@ class Evaluator():
         self.train_loss_sum += train_loss
         self.train_reward_margin_sum += train_reward_margin
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def evaluate_alignment_loss(self, dpo_wrapper: DpoWrapper) -> tuple[float, float]:
         """
         Evaluate the model loss during the alignment process.
