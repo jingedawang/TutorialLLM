@@ -16,4 +16,6 @@
   * [2.7 注意力机制](2.-kai-shi-xing-dong/2.7-zhu-yi-li-ji-zhi.md)
   * [2.8 Transformer](2.-kai-shi-xing-dong/2.8-transformer.md)
   * [2.9 预训练](2.-kai-shi-xing-dong/2.9-yu-xun-lian.md)
+  * [2.10 指令微调](2.-kai-shi-xing-dong/2.10-zhi-ling-wei-tiao.md)
+  * [2.11 与人类偏好对齐](2.-kai-shi-xing-dong/2.11-yu-ren-lei-pian-hao-dui-qi.md)
 * [3. 新的起点](3.-xin-de-qi-dian.md)
