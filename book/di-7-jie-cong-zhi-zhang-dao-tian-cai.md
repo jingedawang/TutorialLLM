@@ -59,7 +59,7 @@
 
 终于，我们打通了从输入到输出的全流程，是时候松口气了。让我们欣赏一下迄今为止的杰作。
 
-<figure><img src=".gitbook/assets/tutorial_llm.png" alt=""><figcaption><p>图2.8 TutorialLLM的网络结构</p></figcaption></figure>
+<figure><img src=".gitbook/assets/tutorial_llm.png" alt=""><figcaption><p>图12 TutorialLLM的网络结构</p></figcaption></figure>
 
 让我对照上图，再完整介绍一下从输入到输出的全过程。
 
