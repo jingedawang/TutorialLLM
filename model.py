@@ -5,8 +5,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch import Tensor
 
-from dataset import Dataset
-
 
 class AttentionHead(nn.Module):
     """
@@ -112,7 +110,7 @@ class MultiHeadAttention(nn.Module):
         output = self.project(output)                                       # (B, T, head_size * num_heads) -> (B, T, dim_embed)
         return output
 
-class FeedFoward(nn.Module):
+class FeedForward(nn.Module):
     """
     Feed-forward neural network.
 
@@ -175,7 +173,7 @@ class TranformerBlock(nn.Module):
         # Create a multi-head self-attention module
         self.multi_head_attention = MultiHeadAttention(dim_embed, num_heads, head_size, max_length)
         # Create a feed-forward neural network module
-        self.feed_forward = FeedFoward(dim_embed)
+        self.feed_forward = FeedForward(dim_embed)
         # Create 2 layer normalization layers
         self.layer_norm1 = nn.LayerNorm(dim_embed)
         self.layer_norm2 = nn.LayerNorm(dim_embed)
