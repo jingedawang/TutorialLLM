@@ -10,5 +10,5 @@
 * [第7节 从智障到天才](di-7-jie-cong-zhi-zhang-dao-tian-cai.md)
 * [第8节 做一个听话的AI](di-8-jie-zuo-yi-ge-ting-hua-de-ai.md)
 * [第9节 AI也要讲基本法](di-9-jie-ai-ye-yao-jiang-ji-ben-fa.md)
-* [第10节 代码实现中的重点（选读）](di-10-jie-dai-ma-shi-xian-zhong-de-zhong-dian-xuan-du.md)
+* [第10节 从理论到实现（选读）](di-10-jie-dai-ma-shi-xian-zhong-de-zhong-dian-xuan-du.md)
 * [第11节 走进AI新时代](di-11-jie-zou-jin-ai-xin-shi-dai.md)

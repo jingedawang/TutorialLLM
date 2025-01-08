@@ -1,4 +1,4 @@
-# 第10节 代码实现中的重点（选读）
+# 第10节 从理论到实现（选读）
 
 {% hint style="success" %}
 **本节导读**
@@ -6,9 +6,10 @@
 了解理论，只是懂了个大概。亲自实践，才算真正理解。那些理论上看起来简单的问题，实现的时候或许会遇到意想不到的麻烦。读完本节，你将会了解
 
 * 代码的架构设计
-* 数据处理模块如何实现
 * 如何使用PyTorch搭建模型
-* 如何训练模型
+* 训练的流程
+* 数据处理模块如何实现
+* 评估模块如何实现
 
 本节内容为选读，跳过本节并不会影响本书进度。
 {% endhint %}
@@ -363,17 +364,71 @@ class Dataset():
 
 此时，预训练用的数据已经存储在`self.pretrain_train_data`和`self.pretrain_evaluate_data`中，等待用户调用。当用户调用`get_batch_pretrain`方法时，先根据用户指定的类型——训练还是评估——来取出对应的数据。接下来，`torch.randint(len(data) - self.max_length, (self.batch_size,))`取了一组`batch_size`个随机数，这些随机数的范围有讲究。由于`self.max_length`代表支持的最长文本长度（我设置的是256），于是每一个随机数都被限制在0和`len(data)-256`之间。这是因为我们在下一行，`inputs = torch.stack([data[index:index+self.max_length] for index in start_indices])`截取了从随机数开始，长度为256的文本序列，作为一个输入样本。随机数的选取范围保证了这里所有长度为256的序列都在数据集范围内。同时，再下一行，`labels = torch.stack([data[index+1:index+self.max_length+1] for index in start_indices])`截取了从随机数的下一个数开始，长度为256的文本序列，作为输入样本的输出真值。[第7节](di-7-jie-cong-zhi-zhang-dao-tian-cai.md)的时候我们曾讲解过为什么这样做，不清楚的读者可以回顾一下。
 
-微调和对齐的数据处理虽然不太一样，但这里也不详述了。读者可以直接参考实际代码中的注释。
+微调和对齐的数据处理不完全一样，但这里不再详述。读者可以直接参考实际代码中的注释。
 
 ## 评估模块
 
 有了数据，有了训练代码，就差最后的评估了。不去评估，我们就不可能知道模型训练的好坏，训练就是盲人摸象。评估本质上是模拟真实的使用场景，提前测试模型的效果。最重要的前提是，模型不能作弊，也就是不能提前学习评估的内容。就好像考试题必须与平常做过的题都不同，考试才能真正体现学习的水平。不过，考试题虽然内容不同，但其考察的方向却必须和平常的学习一致。在模型训练中也是如此。
 
+我们曾在`Dataset`中将数据按照9:1的比例划分为训练集和评估集。这个划分是随机的，从而保证了评估用的数据与训练数据类似。同时，由于评估数据并未用作训练，排除了模型作弊的可能。
 
+以下是评估预训练的代码。
 
+{% code title="evaluator.py" %}
+```python
+import torch
 
+from dataset import Dataset
+from model import TutorialLLM
 
-我们先来看看代码结构。打开GitHub的[TutorialLLM](https://github.com/jingedawang/TutorialLLM)仓库，可以看到如下文件和目录。
+class Evaluator():
+
+    @torch.inference_mode()
+    def evaluate_pretrain(self, model: TutorialLLM, iteration: int, train_loss: float) -> None:
+        if iteration % self.interval_to_evaluate_pretrain == 0:
+            # Get average train loss and evaluate loss
+            mean_loss_train = self.train_loss_sum / self.interval_to_evaluate_pretrain
+            self.reset()
+            evaluate_loss = self.evaluate_pretrain_loss(model, self.iterations_to_evaluate_pretrain)
+            print(f"Step {iteration}, train loss {mean_loss_train:.4f}, evaluate loss {evaluate_loss:.4f}")
+
+            # Let's generate a poem starting with the title '春夜喜雨' to see how the model is doing
+            test_tokens = torch.tensor(self.dataset.encode('春夜喜雨'), dtype=torch.long, device=self.device).unsqueeze(0)
+            print('Generate first 100 characters of poems starting with 春夜喜雨:')
+            print(self.dataset.decode(model.generate(test_tokens, max_new_tokens=100)[0].tolist()))
+        
+        # Accumulate the training loss
+        self.train_loss_sum += train_loss
+    
+    @torch.inference_mode()
+    def evaluate_pretrain_loss(self, model: TutorialLLM, iterations: int) -> float:
+        losses = torch.zeros(iterations)
+        # Evaluate the model `iterations` times
+        for k in range(iterations):
+            # Get a batch of pretrain data and compute the loss
+            inputs, labels = self.dataset.get_batch_pretrain('evaluate')
+            _, loss = model(inputs, labels)
+            losses[k] = loss.item()
+        loss = losses.mean()
+        return loss
+```
+{% endcode %}
+
+前文提到过，在`Trainer`内部循环的每次迭代中，调用了`self.evaluator.evaluate_pretrain(self.model, i, loss.item())`来实现对模型的评估。调用的正是这里给出的函数。`evaluate_pretrain`内部做了三件事。第一，把外部传进来的train\_loss记录并打印出来。第二，调用`evaluate_pretrain_loss`得到模型在评估集上的误差。第三，让模型以“春夜喜雨”开头写诗。
+
+需要注意的是，模型并不是每次迭代都进行评估，而是每`self.interval_to_evaluate_pretrain`次迭代才评估一次，我把它设置为100。这是为了节约时间，因为单次迭代对模型的更新很微小，频繁地评估没什么意义。
+
+在这三件事中，前两件都是关于误差。看到模型在训练过程中误差下降，我们就知道训练有效果。如果还不放心，第三件事让模型真正地写诗，从诗的质量上也可以看出模型的进步。两者各有好处，误差的好处是定量，人或许看不出100次迭代前后模型的变化，但误差下降了就说明它确实在变好。写诗的好处是直观，而且更符合我们的真实需求。有时候，如果损失函数设计有误，看起来误差下降，实际上可能朝着错误的方向优化，这就可以在实际任务上的表现看出来端倪。因此，两者结合，善莫大焉。
+
+在`evaluate_pretrain_loss`中计算模型在评估集上的误差和在`Trainer`中计算模型在训练集上的误差完全一样。唯一值得注意的不同是，我们在函数前面加了`@torch.inference_mode()`注解。这个注解的作用是把模型切换到推理模式。在PyTorch中，为了实现自动求梯度，模型的每一步计算都会缓存中间结果，以方便使用链式法则的反向传播，这需要占用许多时间和空间。如果我们确定在某个函数内部只需要前向传播，不需要反向传播，就可以使用这个注解节约计算量。模型评估就是一个典型场景。评估期间，我们只需要模型的结果，而不需要更新模型，自然也就不需要反向传播求梯度。当模型训练完实际部署的时候，显然也应该切换到推理模式。
+
+## GitHub仓库
+
+至此，代码部分的讲解告一段落。建议感兴趣的读者把代码跑起来，对于我没有讲到且仍然不懂的地方，可以借助ChatGPT等工具。本节的最后，我们一起看下GitHub仓库中的组织形式，以方便读者使用。
+
+GitHub是全球最大的代码托管平台。所谓托管，就是每个人把自己的代码交由GitHub管理。GitHub提供了一整套方便实用的管理工具，允许多人在一个代码库中协作。
+
+我们的代码放在[TutorialLLM](https://github.com/jingedawang/TutorialLLM)仓库（repository）中，进入链接即可看到如下文件和目录。
 
 ```
 TutorialLLM/
@@ -391,30 +446,18 @@ TutorialLLM/
 └── trainer.py
 ```
 
-非.py结尾的文件作用如下：
+以.py结尾的几个文件前文已经详细讲过。非.py结尾的文件作用如下：
 
 * `book`目录内部包含了本书MarkDown格式的草稿，由GitBook托管。
-* `pre_work`目录内部包含了生成`data.json`所需的代码，这部分代码不属于本书讲解范畴。
+* `pre_work`目录内部包含了生成`data.json`所需的代码，这部分代码不属于本书讲解范畴，读者也无需关心。
 * `.gitignore`是Git版本管理工具的一个配置文件，用于指定哪些文件类型不被Git管理。
 * `README.md`是GitHub仓库的默认说明书，打开仓库主页，在文件列表下面看到的就是README的内容。
 * `TutorialLLM.ipynb`是为读者提供的一个在线运行环境，读者可以根据README中的说明，在Google Colab中打开这个文件，运行整个程序。
 * `data.json`中包含了2548位唐代诗人的47457首诗。数据源来自[chinese-poetry](https://github.com/chinese-poetry/chinese-poetry)仓库的全唐诗目录，并经过预处理，去除了一些格式不规整的条目。全部作品使用繁体字。
 * `requirements.txt`规定了运行代码所需的依赖库。
 
-当然，以上都不是重点，剩下的以.py结尾的文件才是真正的代码。让我们对照下面的示意图解释一下代码的结构。
+通常情况下，一个良好的代码库是自包含的。你只需要打开代码库的主页，阅读README中的内容，自然就知道如何使用。如果仍然不清楚，那就是代码库作者自己的问题，要么他不想让别人用，要么这个项目尚待完善。
 
-首先，`run.py`是主程序，我们只需要在命令行中运行`python run.py`即可跑通整个流程。
+关于此项目的任何问题，读者都可以在代码库主页的Issues栏目发帖，看到后我会及时处理。一个开源项目的成功，少不了广大读者的帮助，在此提前向大家表示感谢。
 
-整个流程分为5个阶段（stage），清晰定义在`run.py`中。这5个阶段的作用如下
-
-1. 准备数据
-2. 创建模型
-3. 预训练
-4. 指令微调
-5. 与人类偏好对齐
-
-&#x20;对应于图14，“准备数据”通过调用`dataset.py`完成，“创建模型”通过调用`model.py`完成。而“预训练”、“指令微调”和“与人类偏好对齐”则全部由`trainer.py`通过一个循环实现。在这个循环中，`trainer`对象每次调用`dataset.py`获取一批（a batch）数据，将数据输入`model`对象，得到结果后交给`evaluate`对象评估效果，最后调用PyTorch提供的优化器优化模型参数。一次循环后，模型朝着我们期待的方向略微前进一小步。如此积少成多，最终达到不错的效果。
-
-`run.py`的代码非常简单，而且几乎每行都写了注释，读者应该很容易读懂。接下来，我们进入每个模块，看看它们内部是如何实现以上需求的。
-
-先来看`dataset.py`。
+下一节也是最后一节，我们拓宽思路，漫谈一下在今后的AI世界里，每个普通人可以做些什么。
