@@ -11,4 +11,5 @@
 * [第8节 做一个听话的AI](di-8-jie-zuo-yi-ge-ting-hua-de-ai.md)
 * [第9节 AI也要讲基本法](di-9-jie-ai-ye-yao-jiang-ji-ben-fa.md)
 * [第10节 从理论到实现（选读）](di-10-jie-dai-ma-shi-xian-zhong-de-zhong-dian-xuan-du.md)
-* [第11节 走进AI新时代](di-11-jie-zou-jin-ai-xin-shi-dai.md)
+* [第11节 走进AI新世界](di-11-jie-zou-jin-ai-xin-shi-dai.md)
+* [后记](hou-ji.md)
