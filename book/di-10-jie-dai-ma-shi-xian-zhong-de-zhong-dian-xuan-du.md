@@ -229,7 +229,7 @@ class FeedForward(nn.Module):
 
 我们的计划是，从`Trainer`中拆分出一个`Dataset`类，用来处理与数据相关的工作，再拆分出一个`Evaluator`类，用来评估模型的效果。`Trainer`本身以迭代的方式训练模型，在每个迭代中，先调用`dataset`对象获取一批训练数据和测试数据，然后执行前向传播和反向传播、更新模型参数，最后调用`evaluator`对象评估模型效果，如此循环往复。下图总结了完整的代码执行流程，不同文件负责不同的功能。
 
-<figure><img src=".gitbook/assets/code_architecture.png" alt=""><figcaption><p>图14 代码执行流程</p></figcaption></figure>
+<figure><img src=".gitbook/assets/code_architecture.png" alt=""><figcaption><p>图15 代码执行流程</p></figcaption></figure>
 
 我们仍然沿着自顶向下的原则，先看看`trainer.py`在做什么，然后再看其调用的`dataset.py`和`evaluator.py`。
 
