@@ -1,4 +1,4 @@
-name: Python Tests
+name: Python
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.11, 3.12] # 列出支持的 Python 版本
+        python-version: [3.11, 3.12]
 
     steps:
       - name: Checkout code
