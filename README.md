@@ -2,9 +2,7 @@
 
 [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb)
-![Python 3.11](https://img.shields.io/github/actions/workflow/status/jingedawang/tutorialllm/python.yml?matrix.python-version=3.11&label=Python%203.11)
-![Python 3.12](https://img.shields.io/github/actions/workflow/status/jingedawang/tutorialllm/python.yml?matrix.python-version=3.12&label=Python%203.12)
-![Python 3.13](https://img.shields.io/github/actions/workflow/status/jingedawang/tutorialllm/python.yml?matrix.python-version=3.13&label=Python%203.13)
+[![Python](https://github.com/jingedawang/TutorialLLM/actions/workflows/python.yml/badge.svg)](https://github.com/jingedawang/TutorialLLM/actions/workflows/python.yml)
 
 This tutorial will guide you through the process of training a large language model (LLM) step
 by step. For educational purposes, we choosed a small dataset and a small model, but the basic principles we want to convey is the same with larger models.
