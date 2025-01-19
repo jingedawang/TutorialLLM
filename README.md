@@ -15,6 +15,8 @@ Click [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blu
 
 The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome any feedback or contribution through issues or pull requests.
 
+This book is also published as a paid column for 知乎知识会员. You can search 王金戈 on 知乎 app and find the book in my homepage.
+
 ## Code
 
 ### Run with Google Colab
