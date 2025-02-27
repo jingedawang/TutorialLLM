@@ -93,13 +93,22 @@ $$
 
 $$
 \begin{align*}
-\frac{\partial \text{loss}}{\partial w_1} &= 2 \left( f(0.8, 0.3, 0.7) - 0.6 \right) \frac{\partial f}{\partial w_1} \\
+\frac{\partial \text{loss}}{\partial w_1} 
+&= \frac{\partial \text{loss}}{\partial f} \frac{\partial f}{\partial w_1} \\
+&= \frac{\partial \left(f - 0.6\right)^2}{\partial f} \frac{\partial \left( 0.8*w_1 + 0.3 * w_2 + 0.7 * w_3 \right)}{\partial w_1} \\
+&= 2 \times \left( f(0.8, 0.3, 0.7) - 0.6 \right) \times 0.8 \\
 &= 2 \times (1.8 - 0.6) \times 0.8 \\
 &= 1.92 \\
-\frac{\partial \text{loss}}{\partial w_2} &= 2 \left( f(0.8, 0.3, 0.7) - 0.6 \right) \frac{\partial f}{\partial w_2} \\
+\frac{\partial \text{loss}}{\partial w_2} 
+&= \frac{\partial \text{loss}}{\partial f} \frac{\partial f}{\partial w_2} \\
+&= \frac{\partial \left(f - 0.6\right)^2}{\partial f} \frac{\partial \left( 0.8*w_1 + 0.3 * w_2 + 0.7 * w_3 \right)}{\partial w_2} \\
+&= 2 \times \left( f(0.8, 0.3, 0.7) - 0.6 \right) \times 0.3 \\
 &= 2 \times (1.8 - 0.6) \times 0.3 \\
 &= 0.72 \\
-\frac{\partial \text{loss}}{\partial w_3} &= 2 \left( f(0.8, 0.3, 0.7) - 0.6 \right) \frac{\partial f}{\partial w_3} \\
+\frac{\partial \text{loss}}{\partial w_3} 
+&= \frac{\partial \text{loss}}{\partial f} \frac{\partial f}{\partial w_3} \\
+&= \frac{\partial \left(f - 0.6\right)^2}{\partial f} \frac{\partial \left( 0.8*w_1 + 0.3 * w_2 + 0.7 * w_3 \right)}{\partial w_3} \\
+&= 2 \times \left( f(0.8, 0.3, 0.7) - 0.6 \right) \times 0.7 \\
 &= 2 \times (1.8 - 0.6) \times 0.7 \\
 &= 1.68
 \end{align*}
@@ -110,14 +119,14 @@ $$
 $$
 \begin{align*}
 w_1 &= w_1 - \alpha \frac{\partial \text{loss}}{\partial w_1} \\
-&= 0.8 - 0.1 \times 1.92 \\
-&= 0.608 \\
+&= 1 - 0.1 \times 1.92 \\
+&= 0.808 \\
 w_2 &= w_2 - \alpha \frac{\partial \text{loss}}{\partial w_2} \\
-&= 0.3 - 0.1 \times 0.72 \\
-&= 0.228 \\
+&= 1 - 0.1 \times 0.72 \\
+&= 0.928 \\
 w_3 &= w_3 - \alpha \frac{\partial \text{loss}}{\partial w_3} \\
-&= 0.7 - 0.1 \times 1.68 \\
-&= 0.532
+&= 1 - 0.1 \times 1.68 \\
+&= 0.832
 \end{align*}
 $$
 
@@ -128,13 +137,13 @@ $$
 $$
 \begin{align*}
 f(0.8, 0.3, 0.7) &= \max \left(0, 0.8w_1 + 0.3w_2 + 0.7w_3 \right) \\
-&= \max \left( 0, 0.8 \times 0.608 + 0.3 \times 0.228 + 0.7 \times 0.532  \right) \\
-&= \max \left( 0, 0.9272 \right) \\
-&= 0.9272
+&= \max \left( 0, 0.8 \times 0.808 + 0.3 \times 0.928 + 0.7 \times 0.832  \right) \\
+&= \max \left( 0, 1.5072 \right) \\
+&= 1.5072
 \end{align*}
 $$
 
-果然，函数值从之前的1.8变成了0.9272，离0.6近了不少。如果不断重复这个流程，理论上函数的结果就可以越来越接近0.6。不过我们在这里打住，大家只要感受到优化的过程就行了。
+果然，函数值从之前的1.8变成了1.5072，向0.6靠近了一步。如果不断重复这个流程，理论上函数的结果就可以越来越接近0.6。不过我们在这里打住，大家只要感受到优化的过程就行了。
 
 实际上，这里演示的是一个究极简化的版本，只有一个神经元，loss也是简单的欧氏距离。但无论怎样复杂的模型，都是由一层一层神经元组合起来的，本质上是一层又一层嵌套的函数。根据链式法则，只要函数定义清晰，总能求出loss关于每一个参数的导数，那么就可以据此更新每个参数。
 
