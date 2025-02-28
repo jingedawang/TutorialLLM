@@ -1,32 +1,34 @@
-# 从零入门大模型
+# Tutorial LLM
 
 [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb)
 [![Python](https://github.com/jingedawang/TutorialLLM/actions/workflows/python.yml/badge.svg)](https://github.com/jingedawang/TutorialLLM/actions/workflows/python.yml)
 
-[![中文文档](https://img.shields.io/badge/中文-white)](README.md) [![中文文档](https://img.shields.io/badge/English-gray)](README-en.md)
+[![中文文档](https://img.shields.io/badge/中文-gray)](README.md) [![中文文档](https://img.shields.io/badge/English-white)](README-en.md)
 
-本仓库包含教材《从零入门大模型》的代码实现和原始文本。
+This tutorial will guide you through the process of training a large language model (LLM) step
+by step. For educational purposes, we choosed a small dataset and a small model, but the basic principles we want to convey is the same with larger models.
 
-该教程引导你从零开始逐步训练一个大语言模型（LLM）。出于教学目的，我们使用了一个小数据集和一个小模型，但保留了大模型训练的完整流程和基本架构。
+We provide a tutorial book and a code implementation. You can **read the book** to understand the theory and then **run the code** to see the practice. The code is well-documented and easy to understand.
 
-你可以先阅读教材的文本，再运行代码了解细节。代码中包含了详细的注释。
+## Book
 
-## 教材
+Click [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm) to read the book.
 
-点击 [![GitBook](https://img.shields.io/badge/GitBook-从零入门大模型-blue)](https://jingedawang.gitbook.io/tutorialllm) 阅读教材。教材的原始文档在本仓库的`book`目录中，由GitBook托管发布。欢迎通过Issue给我们提建议。
+The book is hosted on GitBook. But the content is located in the `book` folder in this repository in markdown format. Welcome any feedback or contribution through issues or pull requests.
 
-该教材同时与知乎官方合作作为付费专栏提供给知乎知识会员。你可以在知乎搜索“王金戈”，在我的作品中找到 **《会说话的AI：从零入门大模型》**。
+This book is also published as a paid column for 知乎知识会员. You can search 王金戈 on 知乎 app and find the book in my homepage.
 
-## 代码
+## Code
 
-### 使用Google Colab运行
+### Run with Google Colab
 
-如果不想在自己电脑上搭建开发环境，建议点击 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb) ，在Google Colab中运行代码。
+If you don't have any hardware or don't want to setup environment yourself, try use Google Colab.
+Click [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb) to open the notebook in Google Colab.
 
-### 本地运行
+### Run locally
 
-请下载并安装[Python 3.12](https://www.python.org/downloads/)，然后执行如下命令：
+Please download and install [Python 3.12](https://www.python.org/downloads/), then run the following commands:
 
 ```bash
 git clone https://github.com/jingedawang/TutorialLLM.git
@@ -35,9 +37,9 @@ pip install -r requirements.txt
 python run.py
 ```
 
-程序的运行分为5个阶段，你将会依次看到每个阶段的输出。
+You will see the training process in 5 stages.
 
-**阶段1**, 准备数据。对训练数据进行预处理，生成符合模型输入格式的数据集。
+**In stage 1**, we prepare the data used for training. You will see output like this:
 
 ```
 --------------------------------------------------
@@ -119,9 +121,10 @@ Check a batch of alignment data:
         [   8,    9,   12,  ..., -100, -100, -100],
         [   8,    9,   12,  ..., -100, -100, -100]], device='cuda:0'))
 ```
-以上显示了预训练、微调和对齐三个阶段所需的数据格式。后续的训练阶段将会使用这些数据训练模型。
 
-**阶段2**, 训练配置。
+It shows the pretrain, finetune, alignment data in text and tensor format to give you a sense of the data. The training procedure will use these data to train the model.
+
+**In stage 2**, we set up some training configurations. You will see output like this:
 
 ```
 --------------------------------------------------
@@ -129,11 +132,7 @@ STAGE 2: TRAINING CONFIGURATION
 Our model has 1.318372 M parameters
 ```
 
-**阶段3**, 预训练。
-
-通过让模型阅读大量文本，培养模型的基础语言能力。该过程称为预训练（pretrain）。
-
-在本案例中，我们让模型阅读大量的唐诗，从而培养其写诗的语感。
+**In stage 3**, we pretrain the model. You will see output like this:
 
 ```
 --------------------------------------------------
@@ -185,18 +184,10 @@ Generate first 100 characters of poems starting with 春夜喜雨:
 自謂長安不速時，當來不得鷓鴣
 ```
 
-以上输出展示了预训练模型的变化过程。
-+ 最开始，生成的文字完全随机，没有任何含义。说明模型还什么都不懂。
-+ 经过5000步训练，模型开始学会正确地使用词组和短语。
-+ 经过10000步训练，模型开始学会规范诗句结构，诗句也更为流畅。
+The changes of the generated poems is interesting through the training. At beginning, you can see the generated poem is completely random in the step 0, indicating the model has not learned anything. As the training goes on, the generated poem becomes more and more like a real poem.
+It learns some words and phrases when it comes to step 5000. It learns the structure and more fluent expression when it comes to step 10000. Due to the limitation of the small dataset and small model, the generated poem may not looks very good, but you can feel the learning process in it.
 
-由于模型大小和算力的原因，最终生成的诗文可能并不完美，但足以让我们体会到模型的学习过程。
-
-**阶段4**, 微调。
-
-有了基础语言能力后，使用指令微调（instruction fine-tune）技术可以让模型根据指令生成更加符合要求的文本。
-
-比如，用户任意指定题目，模型生成一首完整的诗。
+**In stage 4**, we finetune the model to let it write a poem for a given title. You will see output like this:
 
 ```
 --------------------------------------------------
@@ -225,15 +216,9 @@ Generate a complete poem for title 春夜喜雨:
 殘春望江島，不見磬聲王。
 ```
 
-在之前的预训练阶段，并不存在一首诗的概念。因为训练数据是所有诗文的拼接，模型只学会不停地生成符合诗文格式的文本，而不会在生成完一首诗后停下来。
+In the previous pretrain stage, the model doesn't have a concept of one poem. It just learns to generate texts that resemble poems endlessly. In the finetune stage, we ask the model to generate a poem with a given title. You can see the model learns to generate a poem in a correct format after finetuning, and the topic of the generated poem is gradually closer to the given title.
 
-在微调阶段，通过设置训练数据的结构，可以让模型学会按照我们的指令写诗。在这个例子中，我们要求模型根据用户提供的题目生成一首完整的诗。
-
-**阶段5**, 对齐。
-
-这是大模型之所以强大的重要原因之一，也是ChatGPT能够成功的关键因素。在实际应用场景中，有必要让大模型的输出符合人类价值观，避免危险、冒犯、歧视等话题产生。这个过程称为对齐（alignment）。
-
-在本案例中，由于作者本人更喜爱五言诗，我们尝试让模型与这一偏好对齐。
+**In stage 5**, we align the model to a specific preference of myself. I like 5-word poems than others. By providing the positive-negative pairs, the model will learn to generate poems more like the positive ones, which are 5-word poems in this case. You will see output like this:
 
 ```
 --------------------------------------------------
@@ -255,12 +240,10 @@ Reference model:
 莫道鸚鵡詩想熟，此催黃柳老風摧。
 ```
 
-可以看到，在训练过程中，我们对比了原始模型与训练后模型的差异。训练前的参考模型（reference model）生成了一首七言诗，而训练后的模型（aligned model）生成了一首五言诗。模型成功对齐了我们的偏好。
+You can see the aligned model generates a 5-word poem, while the reference model generates a 7-word poem. My preference is conveyed to the model through the alignment training.
 
-以上是训练的完整流程。虽然使用的案例非常简单，但从中足以了解到大模型训练各个阶段的基本原理。建议读者亲自尝试运行代码，感受模型学习的过程。
+Though this is a toy example, you should be able to see the basic principles of training a large language model. By looking into the code and running it on your local machine, you can get a deeper understanding of how large language models work.
 
-## 关于作者
+## About
 
-我很喜欢用通俗的语言分享艰深的知识。在我看来，任何知识都应该能够被大众理解，不应成为少数人的专属。如果一篇教材让人读不懂，说明作者没能串联好知识传授的顺序。教学是一门复杂的学问。希望通过我的文章，能够让更多人了解到人工智能的魅力。
-
-欢迎关注我的[知乎](https://www.zhihu.com/people/wang-jin-ge-67)、[B站](https://space.bilibili.com/69217382)、[GitHub](https://github.com/jingedawang)和[LinkedIn](https://www.linkedin.com/in/wangjinge/)。
+I'm a researcher in the field of AI. I like to share my knowledge with people. You can find me on [Zhihu](https://www.zhihu.com/people/wang-jin-ge-67), [LinkedIn](https://www.linkedin.com/in/wangjinge/), and [GitHub](https://github.com/jingedawang). Feel free to leave an issue or contact me if you have any questions.
