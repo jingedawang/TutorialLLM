@@ -21,9 +21,13 @@ This book is also published as a paid column for 知乎知识会员. You can sea
 
 ## Code
 
+The overall architecture is pretty simple. The `run.py` is an entrance, which calls 4 modules accordingly. For more details, you can refer to chapter 10 in the book.
+![code architecture](book/.gitbook/assets/code_architecture.png)
+We provide 2 running modes as below.
+
 ### Run with Google Colab
 
-If you don't have any hardware or don't want to setup environment yourself, try use Google Colab.
+If you don't have any hardware or don't want to set up the environment yourself, try using Google Colab.
 Click [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb) to open the notebook in Google Colab.
 
 ### Run locally
