@@ -20,6 +20,10 @@
 
 ## 代码
 
+整个代码的运行逻辑非常简单，包含在下图的四个模块中，并由`run.py`统一调用执行。详细解读请参考教材第10节。
+![代码架构](book/.gitbook/assets/code_architecture.png)
+我们提供以下两种运行方式。
+
 ### 使用Google Colab运行
 
 如果不想在自己电脑上搭建开发环境，建议点击 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/jingedawang/TutorialLLM/blob/main/TutorialLLM.ipynb) ，在Google Colab中运行代码。
