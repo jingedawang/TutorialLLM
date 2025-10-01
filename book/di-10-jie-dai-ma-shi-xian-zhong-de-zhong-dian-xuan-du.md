@@ -58,7 +58,7 @@ trainer.align()
 在图12中，某些模块，比如Embedding Table和Cross Entropy Loss，可以直接调用PyTorch自带的类库。而其核心模块——Transformer Block所代表的图11中的复杂结构，即注意力机制的实现，则需要我们自己定义。
 
 {% hint style="info" %}
-实际上，PyTorch也提供了`torch.nn.Transformer`类。出于教学目的，我们当然要自己实现，不用这个。但真实应用的时候，显然还是直接调库比较方便。
+其实PyTorch也提供了`torch.nn.Transformer`类，出于教学目的，我们决定自己重新实现一遍。但实际应用时，显然还是直接调库比较方便。
 {% endhint %}
 
 定义模型包含两个步骤，分别对应于我们将要实现的两个方法——`__init__`和`forward`。
@@ -141,7 +141,7 @@ class TranformerBlock(nn.Module):
 
 可以看到，这里调用`MultiHeadAttention`类实现注意力机制，调用`FeedForward`类实现前馈神经网络。当然，这两个类也需要我们自己定义。
 
-`MultiHeadAttention`是注意力机制的实用版本。前文所讲解的注意力机制叫做单头注意力（Single Head Attention），Query、Key、Value矩阵各有一份。而实际上，我们完全可以将其扩展到多份，每一套Query、Key、Value矩阵称作一个头（Head），每个头独立处理相同的输入，输出不同结果。最后用一个线性变换把所有结合合并起来。具体实现如下。
+`MultiHeadAttention`是注意力机制的实际版本。前文所讲解的注意力机制叫做单头注意力（Single Head Attention），Query、Key、Value矩阵各有一份。而实际上，我们完全可以将其扩展到多份，每一套Query、Key、Value矩阵称作一个头（Head），每个头独立处理相同的输入，输出不同结果。最后用一个线性变换把所有结果合并起来。具体实现如下。
 
 {% code title="model.py" %}
 ```python
@@ -204,7 +204,7 @@ class AttentionHead(nn.Module):
 
 现在，只差Transformer Block的第二部分——`FeedForward`类还没介绍。不过好在这个模型非常简单，几行代码就能搞定。
 
-{% code title="" %}
+{% code title="model.py" %}
 ```python
 class FeedForward(nn.Module):
 
@@ -362,7 +362,7 @@ class Dataset():
 * 第三步，构造从字符到ID的字典。由于该字典需要包含所有训练数据中的字符，这里的做法是把所有用于预训练、微调和对齐的文本全部放在一起，去重后用每个字在序列中的下标作为ID。创建`self.encode`和`self.decode`函数，以方便字符到ID以及ID到字符的转换。
 * 第四步，把预训练部分的超长文本转成一个ID数组，将其中的90%作为训练数据，剩余10%作为评估数据。
 
-此时，预训练用的数据已经存储在`self.pretrain_train_data`和`self.pretrain_evaluate_data`中，等待用户调用。当用户调用`get_batch_pretrain`方法时，先根据用户指定的类型——训练还是评估——来取出对应的数据。接下来，`torch.randint(len(data) - self.max_length, (self.batch_size,))`取了一组`batch_size`个随机数，这些随机数的范围有讲究。由于`self.max_length`代表支持的最长文本长度（我设置的是256），于是每一个随机数都被限制在0和`len(data)-256`之间。这是因为我们在下一行，`inputs = torch.stack([data[index:index+self.max_length] for index in start_indices])`截取了从随机数开始，长度为256的文本序列，作为一个输入样本。随机数的选取范围保证了这里所有长度为256的序列都在数据集范围内。同时，再下一行，`labels = torch.stack([data[index+1:index+self.max_length+1] for index in start_indices])`截取了从随机数的下一个数开始，长度为256的文本序列，作为输入样本的输出真值。[第7节](di-7-jie-cong-zhi-zhang-dao-tian-cai.md)的时候我们曾讲解过为什么这样做，不清楚的读者可以回顾一下。
+此时，预训练用的数据已经存储在`self.pretrain_train_data`和`self.pretrain_evaluate_data`中，等待用户调用。当用户调用`get_batch_pretrain`方法时，先根据用户指定的类型——训练还是评估——来取出对应的数据。接下来，`torch.randint(len(data) - self.max_length, (self.batch_size,))`取了一组（`batch_size`个）随机数，这些随机数的范围有讲究。由于`self.max_length`代表支持的最长文本长度（我设置的是256），于是每一个随机数都被限制在0和`len(data)-256`之间。这是因为我们在下一行，`inputs = torch.stack([data[index:index+self.max_length] for index in start_indices])`截取了从随机数开始，长度为256的文本序列，作为一个输入样本。随机数的选取范围保证了这里所有长度为256的序列都在数据集范围内。同时，再下一行，`labels = torch.stack([data[index+1:index+self.max_length+1] for index in start_indices])`截取了从随机数的下一个数开始，长度为256的文本序列，作为输入样本的输出真值。[第7节](di-7-jie-cong-zhi-zhang-dao-tian-cai.md)的时候我们曾讲解过为什么这样做，不清楚的读者可以回顾一下。
 
 微调和对齐的数据处理不完全一样，但这里不再详述。读者可以直接参考实际代码中的注释。
 
@@ -418,13 +418,13 @@ class Evaluator():
 
 需要注意的是，模型并不是每次迭代都进行评估，而是每`self.interval_to_evaluate_pretrain`次迭代才评估一次，我把它设置为100。这是为了节约时间，因为单次迭代对模型的更新很微小，频繁地评估没什么意义。
 
-在这三件事中，前两件都是关于误差。看到模型在训练过程中误差下降，我们就知道训练有效果。如果还不放心，第三件事让模型真正地写诗，从诗的质量上也可以看出模型的进步。两者各有好处，误差的好处是定量，人或许看不出100次迭代前后模型的变化，但误差下降了就说明它确实在变好。写诗的好处是直观，而且更符合我们的真实需求。有时候，如果损失函数设计有误，看起来误差下降，实际上可能朝着错误的方向优化，这就可以在实际任务上的表现看出来端倪。因此，两者结合，善莫大焉。
+在这三件事中，前两件都是关于误差。看到模型在训练过程中误差下降，我们就知道训练有效果。如果还不放心，第三件事让模型真正地写诗，从诗的质量上也可以看出模型的进步。两者各有好处，误差的好处是定量，人或许看不出100次迭代前后模型的变化，但误差下降了就说明它确实在变好。写诗的好处是直观，而且更符合我们的真实需求。有时候，如果损失函数设计有误，看起来误差下降，实际表现却一塌糊涂，说明模型在朝着错误的方向优化。因此，两者结合着看最为保险。
 
-在`evaluate_pretrain_loss`中计算模型在评估集上的误差和在`Trainer`中计算模型在训练集上的误差完全一样。唯一值得注意的不同是，我们在函数前面加了`@torch.inference_mode()`注解。这个注解的作用是把模型切换到推理模式。在PyTorch中，为了实现自动求梯度，模型的每一步计算都会缓存中间结果，以方便使用链式法则的反向传播，这需要占用许多时间和空间。如果我们确定在某个函数内部只需要前向传播，不需要反向传播，就可以使用这个注解节约计算量。模型评估就是一个典型场景。评估期间，我们只需要模型的结果，而不需要更新模型，自然也就不需要反向传播求梯度。当模型训练完实际部署的时候，显然也应该切换到推理模式。
+在`evaluate_pretrain_loss`中计算模型在评估集上的误差和在`Trainer`中计算模型在训练集上的误差完全一样。唯一值得注意的不同是，我们在函数前面加了`@torch.inference_mode()`注解。这个注解的作用是把模型切换到推理模式。在PyTorch中，为了实现自动求梯度，模型会缓存前向传播的每一步中间结果，以方便反向传播时使用，这需要占用许多时间和空间。如果我们确定在某个函数内部只需要前向传播，不需要反向传播，就可以使用这个注解节约计算量。模型评估就属于这类场景。评估期间，我们只需要模型的结果，而不需要更新模型，自然也就不需要反向传播求梯度。此外，当模型训练完毕，实际部署的时候，也应该切换到推理模式。
 
 ## GitHub仓库
 
-至此，代码部分的讲解告一段落。建议感兴趣的读者把代码跑起来，对于我没有讲到且仍然不懂的地方，可以借助ChatGPT等工具。本节的最后，我们一起看下GitHub仓库中的组织形式，以方便读者使用。
+至此，代码部分的讲解告一段落。建议感兴趣的读者把代码跑起来，对于我没有讲到或仍然不懂的地方，可以试试寻求ChatGPT等AI的帮助。本节的最后，我们一起看下GitHub仓库的组织形式，以便读者快速上手。
 
 GitHub是全球最大的代码托管平台。所谓托管，就是每个人把自己的代码交由GitHub管理。GitHub提供了一整套方便实用的管理工具，允许多人在一个代码库中协作。
 
