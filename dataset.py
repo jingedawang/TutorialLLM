@@ -96,7 +96,7 @@ class Dataset():
         print(alignment_texts[0])
 
         # Create a vocabulary from all the characters appeared in the poems and the instructions.
-        # Note that we add a special character '\0' in the end, which is used as an end-of-text token(will be index 0 in the vocabulary).
+        # Note that we add a special character '\0' in the end, which is used as an end-of-text token (it will be index 0 in the vocabulary).
         # An end-of-text token is useful to let the model know when to stop generating text.
         all_text = f'{pretrain_text}{"".join(finetune_texts)}{"".join([pair[0] + pair[1] for pair in alignment_texts])}\0'
         # Get a sorted list of unique characters
@@ -229,14 +229,14 @@ class Dataset():
     def process_batch(self, batch: list) -> tuple[Tensor, Tensor]:
         """
         Process a batch of token id lists.
-        Emplace 0 to the positions that exceed the actual length of each item, and mask these positions in the label by setting them to -100.
-        This is necessary to let the model know where to stop(first 0 in label) and ignore the rest padding tokens in the loss calculation.
+        Pad positions beyond each item's actual length with 0, then mask those label positions by setting them to -100.
+        This keeps the first 0 label as the end-of-text marker and ignores the remaining padding tokens in the loss calculation.
 
         Args:
             batch: A list of token id lists, where each list is a poem represented by token ids.
 
         Returns:
-            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence.
+            A batch of input token id lists and label token ids. The label refers to the next character of each input sequence.
         """
         # All the inputs and labels are initialized to zeros of largest length
         inputs = torch.zeros(len(batch), self.max_length, dtype=torch.long)

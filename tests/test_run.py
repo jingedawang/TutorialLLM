@@ -16,7 +16,8 @@ def test_forward_reduce_loss_false_returns_unreduced_loss_without_warning():
     Test the unreduced loss path used by DPO without relying on dataset loading.
     """
     torch.manual_seed(2024)
-    model = TutorialLLM(vocabulary_size=17, dim_embed=8, max_length=4, num_head=1, num_layer=1, device='cpu')
+    # Keep the constructor device intentionally stale to verify forward uses the input tensor device.
+    model = TutorialLLM(vocabulary_size=17, dim_embed=8, max_length=4, num_head=2, num_layer=1, device='cuda')
     token_ids = torch.randint(0, 17, (2, 4))
     labels = torch.randint(0, 17, (2, 4))
 
@@ -26,7 +27,7 @@ def test_forward_reduce_loss_false_returns_unreduced_loss_without_warning():
 
     assert logits.shape == (8, 17)
     assert loss.shape == (8,)
-    assert not any('size_average and reduce args will be deprecated' in str(w.message) for w in caught)
+    assert not caught
 
 
 

@@ -57,7 +57,7 @@ class AttentionHead(nn.Module):
         # Compute the self-attention weights
         weights = query @ key.transpose(-2, -1)   # (B, T, head_size) @ (B, head_size, T) -> (B, T, T)
         # Scale the attention weights to avoid the problem of vanishing gradients.
-        weights *= dim_embed ** -0.5
+        weights *= query.size(-1) ** -0.5
         # Mask the attention weights to respect the causal constraint
         # Slice the tril matrix to fit the size of the current input
         weights = weights.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
@@ -252,7 +252,7 @@ class TutorialLLM(nn.Module):
         # Get the token embedding and position embedding
         token_embedding = self.token_embedding_table(token_ids) # (B, T) -> (B, T, dim_embed)
         # The absolute position embedding is quite old fashioned but it's good enough for our tutorial
-        position_embedding = self.position_embedding_table(torch.arange(T, device=self.device)) # (T) -> (T, dim_embed)
+        position_embedding = self.position_embedding_table(torch.arange(T, device=token_ids.device)) # (T) -> (T, dim_embed)
         # Add the token embedding and position embedding in the last dimension
         embedding = token_embedding + position_embedding        # (B, T, dim_embed) + (T, dim_embed) -> (B, T, dim_embed)
         # Send the embedding through the transformer blocks
