@@ -23,7 +23,7 @@ class Dataset():
         + For instruction finetune data, each poem is formatted as an instruction-response pair.
             The instruction is a fixed string '請用以下題目寫一首詩' and a title, while the response is the paragraphs of the poem.
         + For alignment data, each item contains a positive-negative pair of poems. The positive pair is the original poem,
-            while the negative pair has at least one paragraph replaced by a random paragraph from other poems.
+            while the negative pair is sampled from a random non-five-words poem.
 
         Data in each category will be further split into train and evaluate sets.
         All the data will be tokenized into a token id sequence, where each token is a character in the vocabulary.
@@ -96,7 +96,7 @@ class Dataset():
         print(alignment_texts[0])
 
         # Create a vocabulary from all the characters appeared in the poems and the instructions.
-        # Note that we add a special character '\0' in the end, which is used as an end-of-text token.
+        # Note that we add a special character '\0' in the end, which is used as an end-of-text token(will be index 0 in the vocabulary).
         # An end-of-text token is useful to let the model know when to stop generating text.
         all_text = f'{pretrain_text}{"".join(finetune_texts)}{"".join([pair[0] + pair[1] for pair in alignment_texts])}\0'
         # Get a sorted list of unique characters
@@ -137,7 +137,7 @@ class Dataset():
 
         Returns:
             Two tensors of shape (`batch_size`, `max_length`), where the first tensor is the input tokens and the second tensor is the label tokens.
-            The second dimension is the length of the text. We formed each label by shifting the input by one character to the right.
+            The second dimension is the length of the text. We formed each label by shifting the input by one character to the right to let the model learn to predict the next character.
         """
         # Choose train or evaluate split
         data = self.pretrain_train_data if split == 'train' else self.pretrain_evaluate_data
@@ -229,12 +229,14 @@ class Dataset():
     def process_batch(self, batch: list) -> tuple[Tensor, Tensor]:
         """
         Process a batch of token id lists.
+        Emplace 0 to the positions that exceed the actual length of each item, and mask these positions in the label by setting them to -100.
+        This is necessary to let the model know where to stop(first 0 in label) and ignore the rest padding tokens in the loss calculation.
 
         Args:
             batch: A list of token id lists, where each list is a poem represented by token ids.
 
         Returns:
-            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence
+            A batch of input token id lists and label token ids. The label refer to the next character of each input sequence.
         """
         # All the inputs and labels are initialized to zeros of largest length
         inputs = torch.zeros(len(batch), self.max_length, dtype=torch.long)

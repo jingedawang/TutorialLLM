@@ -56,7 +56,7 @@ class AttentionHead(nn.Module):
         value = self.project_to_value(input)      # (B, T, dim_embed) -> (B, T, head_size)
         # Compute the self-attention weights
         weights = query @ key.transpose(-2, -1)   # (B, T, head_size) @ (B, head_size, T) -> (B, T, T)
-        # Scale the attention weights to
+        # Scale the attention weights to avoid the problem of vanishing gradients.
         weights *= dim_embed ** -0.5
         # Mask the attention weights to respect the causal constraint
         # Slice the tril matrix to fit the size of the current input
@@ -89,7 +89,8 @@ class MultiHeadAttention(nn.Module):
         self.heads = nn.ModuleList([AttentionHead(dim_embed, head_size, max_length) for _ in range(num_heads)])
         # Create a linear layer to project the concatenated output of all heads to the original dimension.
         # In our case, the concatenated output is happen to be the same as the original dimension, so we can skip
-        # this projection layer. But in general, the output of the heads may have different dimension than the input.
+        # this projection layer. But in general, the output of the heads may have different dimension than the input and
+        # we keep this projection layer to make sure the flow of computation is consistent.
         self.project = nn.Linear(head_size * num_heads, dim_embed)
 
     def forward(self, input: Tensor) -> Tensor:
@@ -148,7 +149,7 @@ class FeedForward(nn.Module):
         """
         return self.feed_forward(input)           # (B, T, dim_embed) -> (B, T, 4 * dim_embed) -> (B, T, dim_embed)
 
-class TranformerBlock(nn.Module):
+class TransformerBlock(nn.Module):
     """
     Transformer block.
 
@@ -182,8 +183,7 @@ class TranformerBlock(nn.Module):
         """
         Compute the output of the transformer block for the input tensor.
 
-        We treat the attention heads and the feed-forward neural network as residual
-        steams.
+        We treat the attention heads and the feed-forward neural network as residual streams.
 
         Args:
             input: A tensor of shape (B, T, `dim_embed`) where B is the batch size,
@@ -228,7 +228,7 @@ class TutorialLLM(nn.Module):
         # Create a position embedding table to add positional information to the token vectors
         self.position_embedding_table = nn.Embedding(max_length, dim_embed)
         # Create a series of transformer blocks
-        self.transformer_blocks = nn.Sequential(*[TranformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
+        self.transformer_blocks = nn.Sequential(*[TransformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
         # Create a layer normalization layer for the final output
         self.layer_norm_final = nn.LayerNorm(dim_embed)
         # Create a linear layer to project the output from embedding space to vocabulary space
@@ -251,6 +251,7 @@ class TutorialLLM(nn.Module):
         B, T = token_ids.shape
         # Get the token embedding and position embedding
         token_embedding = self.token_embedding_table(token_ids) # (B, T) -> (B, T, dim_embed)
+        # The absolute position embedding is quite old fashioned but it's good enough for our tutorial
         position_embedding = self.position_embedding_table(torch.arange(T, device=self.device)) # (T) -> (T, dim_embed)
         # Add the token embedding and position embedding in the last dimension
         embedding = token_embedding + position_embedding        # (B, T, dim_embed) + (T, dim_embed) -> (B, T, dim_embed)
@@ -270,7 +271,8 @@ class TutorialLLM(nn.Module):
             # Flatten the labels to a list of token ids
             labels = labels.view(B * T)
             # Compute the cross-entropy loss between the logits and the labels
-            loss = F.cross_entropy(logits, labels, reduce=reduce_loss)
+            reduction = 'mean' if reduce_loss else 'none'
+            loss = F.cross_entropy(logits, labels, reduction=reduction)
 
         return logits, loss
 

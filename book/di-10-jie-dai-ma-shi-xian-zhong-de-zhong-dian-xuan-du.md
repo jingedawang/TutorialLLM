@@ -79,7 +79,7 @@ class TutorialLLM(nn.Module):
         self.device = device
         self.token_embedding_table = nn.Embedding(vocabulary_size, dim_embed)
         self.position_embedding_table = nn.Embedding(max_length, dim_embed)
-        self.transformer_blocks = nn.Sequential(*[TranformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
+        self.transformer_blocks = nn.Sequential(*[TransformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
         self.layer_norm_final = nn.LayerNorm(dim_embed)
         self.project = nn.Linear(dim_embed, vocabulary_size)
 
