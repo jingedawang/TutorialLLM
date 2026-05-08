@@ -88,7 +88,7 @@ class MultiHeadAttention(nn.Module):
         # Create a list of `num_heads` attention heads
         self.heads = nn.ModuleList([AttentionHead(dim_embed, head_size, max_length) for _ in range(num_heads)])
         # Create a linear layer to project the concatenated output of all heads to the original dimension.
-        # In our case, the concatenated output is happen to be the same as the original dimension, so we can skip
+        # In our case, the concatenated output happens to be the same as the original dimension, so we can skip
         # this projection layer. But in general, the output of the heads may have different dimension than the input and
         # we keep this projection layer to make sure the flow of computation is consistent.
         self.project = nn.Linear(head_size * num_heads, dim_embed)
