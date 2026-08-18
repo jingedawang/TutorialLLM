@@ -79,14 +79,14 @@ class TutorialLLM(nn.Module):
         self.device = device
         self.token_embedding_table = nn.Embedding(vocabulary_size, dim_embed)
         self.position_embedding_table = nn.Embedding(max_length, dim_embed)
-        self.transformer_blocks = nn.Sequential(*[TranformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
+        self.transformer_blocks = nn.Sequential(*[TransformerBlock(dim_embed, num_head, max_length) for _ in range(num_layer)])
         self.layer_norm_final = nn.LayerNorm(dim_embed)
         self.project = nn.Linear(dim_embed, vocabulary_size)
 
     def forward(self, token_ids: Tensor, labels: Tensor = None, reduce_loss: bool = True) -> tuple[Tensor, Optional[Tensor]]:
         B, T = token_ids.shape
         token_embedding = self.token_embedding_table(token_ids) # (B, T) -> (B, T, dim_embed)
-        position_embedding = self.position_embedding_table(torch.arange(T, device=self.device)) # (T) -> (T, dim_embed)
+        position_embedding = self.position_embedding_table(torch.arange(T, device=token_ids.device)) # (T) -> (T, dim_embed)
         embedding = token_embedding + position_embedding        # (B, T, dim_embed) + (T, dim_embed) -> (B, T, dim_embed)
         embedding = self.transformer_blocks(embedding)          # (B, T, dim_embed) -> (B, T, dim_embed)
         embedding = self.layer_norm_final(embedding)            # (B, T, dim_embed) -> (B, T, dim_embed)
@@ -98,7 +98,8 @@ class TutorialLLM(nn.Module):
             B, T, vocabulary_size = logits.shape
             logits = logits.view(B * T, vocabulary_size)
             labels = labels.view(B * T)
-            loss = F.cross_entropy(logits, labels, reduce=reduce_loss)
+            reduction = 'mean' if reduce_loss else 'none'
+            loss = F.cross_entropy(logits, labels, reduction=reduction)
 
         return logits, loss
 ```
@@ -122,7 +123,7 @@ Layer Norm则是对每一层的输入数据做归一化，把输入的分布转�
 
 {% code title="model.py" %}
 ```python
-class TranformerBlock(nn.Module):
+class TransformerBlock(nn.Module):
 
     def __init__(self, dim_embed: int, num_heads: int, max_length: int) -> None:
         super().__init__()
@@ -180,7 +181,7 @@ class AttentionHead(nn.Module):
         query = self.project_to_query(input)      # (B, T, dim_embed) -> (B, T, head_size)
         value = self.project_to_value(input)      # (B, T, dim_embed) -> (B, T, head_size)
         weights = query @ key.transpose(-2, -1)   # (B, T, head_size) @ (B, head_size, T) -> (B, T, T)
-        weights *= dim_embed ** -0.5
+        weights *= query.size(-1) ** -0.5
         weights = weights.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
         weights = F.softmax(weights, dim=-1)
         output = weights @ value                  # (B, T, T) @ (B, T, head_size) -> (B, T, head_size)
@@ -196,7 +197,7 @@ class AttentionHead(nn.Module):
 
 于是，当我们计算`query @ key.transpose(-2, -1)`时，相当于将`query`中的每个字向量与`key`中的每个字向量求相似度，从而得到T×T大小的方阵，记作`weights`。方阵中的每个元素代表了某个字对另一个字来说的重要性。
 
-紧接着是一个前文没有提到的操作，`weights *= dim_embed ** -0.5`。它让`weights`中的所有元素统一缩小根号`dim_embed`倍，本质上也是一种归一化，作用仍然是稳定模型的训练。
+紧接着是一个前文没有提到的操作，`weights *= query.size(-1) ** -0.5`。它让`weights`中的所有元素统一缩小根号`head_size`倍，本质上也是一种归一化，作用仍然是稳定模型的训练。
 
 然后，最关键的两步来了。`weights = weights.masked_fill(self.tril[:T, :T] == 0, float('-inf'))`利用最开始缓存的下三角矩阵将`weights`的上三角区域重置为0，意味着每个字向量只能参考前面字的信息，不能参考后面字的信息。`weights = F.softmax(weights, dim=-1)`进一步将相似度转换为概率。
 

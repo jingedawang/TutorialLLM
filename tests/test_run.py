@@ -1,5 +1,6 @@
 import os
 import sys
+import warnings
 import torch
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
@@ -8,6 +9,30 @@ from dataset import Dataset
 from evaluator import Evaluator
 from model import TutorialLLM
 from trainer import Trainer
+
+
+def test_forward_reduce_loss_false_returns_unreduced_loss_without_warning():
+    """
+    Test the unreduced loss path used by DPO without relying on dataset loading.
+    """
+    torch.manual_seed(2024)
+    # Keep the constructor device intentionally stale to verify the positional indices follow the input tensor device.
+    model = TutorialLLM(vocabulary_size=17, dim_embed=8, max_length=4, num_head=2, num_layer=1, device='cuda')
+    token_ids = torch.randint(0, 17, (2, 4))
+    labels = torch.randint(0, 17, (2, 4))
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter('always')
+        logits, loss = model(token_ids, labels, reduce_loss=False)
+
+    assert logits.shape == (8, 17)
+    assert loss.shape == (8,)
+    assert not any(
+        'size_average' in str(warning.message) and 'reduce args' in str(warning.message)
+        for warning in caught
+    )
+
+
 
 def test_run():
     """
